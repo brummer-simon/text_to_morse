@@ -1,0 +1,9 @@
+# This openssh configuration is highly insecure. Don't deploy it on anywhere
+# outside of this development environment
+# --------------------------------------------------------------------------------
+
+PermitRootLogin yes
+AuthorizedKeysFile	.ssh/authorized_keys
+PasswordAuthentication yes
+PermitEmptyPasswords no
+Subsystem	sftp	/usr/libexec/sftp-server
