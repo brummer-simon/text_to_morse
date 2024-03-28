@@ -22,6 +22,8 @@ then
     exit 0
 fi
 
-echo "Deleting '${BUILDROOT_BUILD_DIR}'..."
+echo "Deleting development environment..."
 rm -rf "${BUILDROOT_BUILD_DIR}"
 rm -rf "${PASSWORD_FILE}"
+rm -rf "${TMP_QEMU_PID_FILE}"
+rm -rf "${TMP_KERNEL_PACKAGE_INFO_FILE}"

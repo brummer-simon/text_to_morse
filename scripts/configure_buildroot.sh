@@ -9,5 +9,7 @@ stop_qemu_if_running
 # Import out-of-tree config, change it via menuconfig and export it back.
 mkdir -p "${BUILDROOT_BUILD_DIR}"
 cp -f "${BUILDROOT_CUSTOM_CONFIG}" "${BUILDROOT_CONFIG}"
-make -C buildroot menuconfig O="${BUILDROOT_BUILD_DIR}"
+
+# TODO: Prepare Rust Environment
+make ${MAKE_OPTS} menuconfig
 cp -f "${BUILDROOT_CONFIG}" "${BUILDROOT_CUSTOM_CONFIG}"
