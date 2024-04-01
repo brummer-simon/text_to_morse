@@ -53,6 +53,11 @@ To configure the system image, enter:
 make configure_env
 ```
 
+The linux kernel is configured by:
+```
+make configure_kernel
+```
+
 ### Dependencies
 
 Mandatory:

@@ -1,5 +1,5 @@
-# TODO Describe targets
 # TODO Add target to log "into kernel log"
+# TODO Describe targets?
 
 help:
 	echo "+-----------------------------------------------+"

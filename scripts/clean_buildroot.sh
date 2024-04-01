@@ -2,11 +2,10 @@
 
 set -o errexit -o pipefail
 source "scripts/common.sh"
-abort_if_buildroot_not_cloned
-create_random_password_if_not_existing
+preamble
 stop_qemu_if_running
 
-if [ ! -d "${BUILDROOT_BUILD_DIR}" ]
+if [ ! -e "${BUILDROOT_BUILD_DIR}/Makefile" ]
 then
     echo "Nothing to delete. Do nothing."
     exit 0
