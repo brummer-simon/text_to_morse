@@ -1,8 +1,6 @@
 #!/bin/bash
 
 # TODO: Take architecture into account for cross-compiling
-# TODO: Analyize objtool error at the end of the build? Objtool could be disabled with option: CONFIG_STACK_VALIDATION=n
-# TODO: Build linux kernel with LLVM support? See: https://www.linuxembedded.fr/2019/08/my-first-linux-kernel-built-with-clang-compiler
 
 set -o errexit -o pipefail
 source "scripts/common.sh"
