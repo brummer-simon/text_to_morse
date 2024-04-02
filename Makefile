@@ -1,17 +1,15 @@
-# TODO Add target to log "into kernel log"
-# TODO Describe targets?
-
 help:
-	echo "+-----------------------------------------------+"
-	echo "| This makefile supports the following targets: |"
-	echo "| - configure_env                               |"
-	echo "| - configure_kernel                            |"
-	echo "| - build_env                                   |"
-	echo "| - clean_env                                   |"
-	echo "| - start_env                                   |"
-	echo "| - stop_env                                    |"
-	echo "| - login                                       |"
-	echo "+-----------------------------------------------+"
+	echo "+----------------------------------------------------------------------------------+"
+	echo "| This makefile supports the following targets:                                    |"
+	echo "| - configure_env    - Configure virtual environment                               |"
+	echo "| - configure_kernel - Configure linux kernel in virtual environment configuration |"
+	echo "| - build_env        - Build virtual environment.                                  |"
+	echo "| - clean_env        - Delete virtual environment                                  |"
+	echo "| - start_env        - Start virtual environment                                   |"
+	echo "| - stop_env         - Shutdown virtual environment                                |"
+	echo "| - login            - Login into virtual environment                              |"
+	echo "| - login_kernel_log - Login into virtual environment and follow kernel log        |"
+	echo "+----------------------------------------------------------------------------------+"
 
 configure_env:
 	./scripts/configure_buildroot.sh
@@ -34,6 +32,9 @@ stop_env:
 login:
 	./scripts/login_qemu.sh
 
+login_kernel_log:
+	./scripts/login_qemu_kernel_log.sh
+
 .PHONY:\
 	help\
 	configure_env\
@@ -42,7 +43,8 @@ login:
 	clean_env\
 	start_env\
 	stop_env\
-	login
+	login\
+	login_kernel_log
 
 .SILENT:\
 	help\
@@ -52,4 +54,5 @@ login:
 	clean_env\
 	start_env\
 	stop_env\
-	login
+	login\
+	login_kernel_log

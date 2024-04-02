@@ -1,5 +1,4 @@
 set -o errexit -o pipefail
-# TODO: Build with LLVM support?
 
 # Define common variables
 declare WORK_DIR
@@ -29,6 +28,14 @@ readonly BUILDROOT_CUSTOM_CONFIG="${WORK_DIR}/buildroot.config"
 readonly PASSWORD_FILE="${WORK_DIR}/.env_password"
 readonly MAKE_OPTS="-C "${BUILDROOT_DIR}" O="${BUILDROOT_BUILD_DIR}" -s"
 readonly SSH_PORT="2222"
+readonly SSH_OPTS="-p ${SSH_PORT} \
+                   -o StrictHostKeyChecking=no \
+                   -o PubkeyAuthentication=no \
+                   -o PreferredAuthentications=password \
+                   -o UserKnownHostsFile=/dev/null \
+                   -o LogLevel=ERROR \
+                      root@localhost
+                   "
 
 # Update path an other vital environment variables
 RUSTUP_HOME="${BUILDROOT_HOST_RUSTUP_DIR}"
@@ -244,6 +251,7 @@ export BUILDROOT_CUSTOM_CONFIG
 export PASSWORD_FILE
 export MAKE_OPTS
 export SSH_PORT
+export SSH_OPTS
 export RUSTUP_HOME
 export CARGO_HOME
 export PATH

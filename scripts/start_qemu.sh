@@ -52,4 +52,4 @@ else
 fi
 
 echo "Started virtual linux environment (pid=${PID})."
-echo "Wait a moment then login via 'make login'"
+echo "Wait a moment then login via 'make login' or 'make login_kernel_log'"
