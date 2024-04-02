@@ -8,6 +8,8 @@ preamble
 stop_qemu_if_running
 setup_rust_tooling
 
+# TODO: Configure linux
+
 # Replace empty the root password with the password from the local file.
 KEY="BR2_TARGET_GENERIC_ROOT_PASSWD"
 VALUE=$(cat "${PASSWORD_FILE}")

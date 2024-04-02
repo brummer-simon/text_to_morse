@@ -1,4 +1,5 @@
 set -o errexit -o pipefail
+# TODO: Build with LLVM support?
 
 # Define common variables
 declare WORK_DIR
@@ -156,8 +157,7 @@ function setup_rust_tooling() {
 
     # Don't install. Everything is fine.
     else
-        echo "Rust toolchain (${MINIMUM_RUSTC_VERSION}) meets"\
-             "kernel expectency. Do nothing."
+        echo "Rust toolchain (${MINIMUM_RUSTC_VERSION}) meets kernel expectency."
         INSTALL_RUST="no"
     fi
 
@@ -195,15 +195,14 @@ function setup_rust_tooling() {
 
     # Don't install. Everything is fine.
     else
-        echo "Bindgen (${MINIMUM_BINDGEN_VERSION}) meets"\
-             "kernel expectency. Do nothing."
+        echo "Bindgen (${MINIMUM_BINDGEN_VERSION}) meets kernel expectency."
         INSTALL_BINDGEN="no"
     fi
 
     # Install bindgen installation
     if [ "${INSTALL_BINDGEN}" = "yes" ]
     then
-        rustup run stable cargo install --locked --force --version "${MINIMUM_BINDGEN_VERSION}" bindgen-cli
+        rustup run --install stable cargo install --locked --force --version "${MINIMUM_BINDGEN_VERSION}" bindgen-cli
         ln -sf "${BUILDROOT_HOST_CARGO_BIN_DIR}/bindgen" "${BUILDROOT_HOST_BIN_DIR}/bindgen"
     fi
 }
@@ -217,9 +216,11 @@ function preamble() {
     mkdir -p "${BUILDROOT_BUILD_DIR}"
     mkdir -p ${BUILDROOT_HOST_BIN_DIR}
 
-    # Copy custom config
-    echo "Use 'buildroot' config from '${BUILDROOT_CUSTOM_CONFIG}'"
-    cp -f "${BUILDROOT_CUSTOM_CONFIG}" "${BUILDROOT_CONFIG}"
+    if [ ! -e "${BUILDROOT_CONFIG}" ]
+    then
+        echo "Buildroot config does not exist. Create it."
+        make ${MAKE_OPTS} defconfig BR2_DEFCONFIG="${BUILDROOT_CUSTOM_CONFIG}"
+    fi
 }
 
 # Export symbols to outer environment

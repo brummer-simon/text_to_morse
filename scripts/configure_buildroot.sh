@@ -6,5 +6,9 @@ preamble
 stop_qemu_if_running
 
 # Import out-of-tree config, change it via menuconfig and export it back.
+echo "Load configuration..."
+make ${MAKE_OPTS} defconfig BR2_DEFCONFIG="${BUILDROOT_CUSTOM_CONFIG}"
 make ${MAKE_OPTS} menuconfig
-cp -f "${BUILDROOT_CONFIG}" "${BUILDROOT_CUSTOM_CONFIG}"
+
+echo "Store configuration..."
+make ${MAKE_OPTS} savedefconfig BR2_DEFCONFIG="${BUILDROOT_CUSTOM_CONFIG}"
