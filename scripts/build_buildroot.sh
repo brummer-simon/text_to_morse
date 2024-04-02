@@ -1,14 +1,12 @@
 #!/bin/bash
 
+# TODO: Take architecture into account for cross-compiling
+
 set -o errexit -o pipefail
 source "scripts/common.sh"
-abort_if_buildroot_not_cloned
-create_random_password_if_not_existing
+preamble
 stop_qemu_if_running
-
-echo "Configure 'buildroot' from '${BUILDROOT_CUSTOM_CONFIG}'"
-mkdir -p "${BUILDROOT_BUILD_DIR}"
-cp -f "${BUILDROOT_CUSTOM_CONFIG}" "${BUILDROOT_CONFIG}"
+setup_rust_tooling
 
 # Replace empty the root password with the password from the local file.
 KEY="BR2_TARGET_GENERIC_ROOT_PASSWD"
@@ -17,7 +15,7 @@ sed -i "s/^${KEY}=.*/${KEY}=\"${VALUE}\"/" "${BUILDROOT_CONFIG}"
 
 # Build development environment
 echo "Building 'buildroot'..."
-make -C "${BUILDROOT_DIR}" O="${BUILDROOT_BUILD_DIR}"
+make ${MAKE_OPTS}
 
 echo "Built 'buildroot' successfully"
 echo "Start development environment via 'make start_env'"

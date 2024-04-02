@@ -2,11 +2,10 @@
 
 set -o errexit -o pipefail
 source "scripts/common.sh"
-abort_if_buildroot_not_cloned
-create_random_password_if_not_existing
+preamble
 stop_qemu_if_running
 
-readonly QEMU_BINARY="${BUILDROOT_BINARY_DIR}/qemu-system-x86_64"
+readonly QEMU_BINARY="${BUILDROOT_HOST_BIN_DIR}/qemu-system-x86_64"
 readonly KERNEL_BINARY="${BUILDROOT_ARTIFACT_DIR}/bzImage"
 readonly ROOTFS_BINARY="${BUILDROOT_ARTIFACT_DIR}/rootfs.ext2"
 
@@ -49,8 +48,8 @@ then
     echo "Failed to start virtual linux environment. Abort."
     exit 1
 else
-    echo "${PID}" > "${QEMU_PID_FILE}"
+    echo "${PID}" > "${TMP_QEMU_PID_FILE}"
 fi
 
 echo "Started virtual linux environment (pid=${PID})."
-echo "Wait a moment then login via 'make login'"
+echo "Wait a moment then login via 'make login' or 'make login_kernel_log'"

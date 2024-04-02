@@ -2,12 +2,13 @@
 
 set -o errexit -o pipefail
 source "scripts/common.sh"
-abort_if_buildroot_not_cloned
-create_random_password_if_not_existing
+preamble
 stop_qemu_if_running
 
 # Import out-of-tree config, change it via menuconfig and export it back.
-mkdir -p "${BUILDROOT_BUILD_DIR}"
-cp -f "${BUILDROOT_CUSTOM_CONFIG}" "${BUILDROOT_CONFIG}"
-make -C buildroot menuconfig O="${BUILDROOT_BUILD_DIR}"
-cp -f "${BUILDROOT_CONFIG}" "${BUILDROOT_CUSTOM_CONFIG}"
+echo "Load configuration..."
+make ${MAKE_OPTS} defconfig BR2_DEFCONFIG="${BUILDROOT_CUSTOM_CONFIG}"
+make ${MAKE_OPTS} menuconfig
+
+echo "Store configuration..."
+make ${MAKE_OPTS} savedefconfig BR2_DEFCONFIG="${BUILDROOT_CUSTOM_CONFIG}"

@@ -2,11 +2,10 @@
 
 set -o errexit -o pipefail
 source "scripts/common.sh"
-abort_if_buildroot_not_cloned
-create_random_password_if_not_existing
+preamble
 stop_qemu_if_running
 
-if [ ! -d "${BUILDROOT_BUILD_DIR}" ]
+if [ ! -e "${BUILDROOT_BUILD_DIR}/Makefile" ]
 then
     echo "Nothing to delete. Do nothing."
     exit 0
@@ -22,6 +21,8 @@ then
     exit 0
 fi
 
-echo "Deleting '${BUILDROOT_BUILD_DIR}'..."
+echo "Deleting development environment..."
 rm -rf "${BUILDROOT_BUILD_DIR}"
 rm -rf "${PASSWORD_FILE}"
+rm -rf "${TMP_QEMU_PID_FILE}"
+rm -rf "${TMP_KERNEL_PACKAGE_INFO_FILE}"

@@ -53,12 +53,19 @@ To configure the system image, enter:
 make configure_env
 ```
 
+The linux kernel is configured by:
+```
+make configure_kernel
+```
+
 ### Dependencies
 
 Mandatory:
 - All buildroot dependencies. See [buildroot documentation](https://buildroot.org/downloads/manual/manual.html#requirement-mandatory).
 - ssh
 - sshpass
+- jq
+- rustup
 
 Optional:
 TODO (add dependencies to build slides as soon as they exist)
