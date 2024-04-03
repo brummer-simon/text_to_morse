@@ -4,6 +4,7 @@ help:
 	echo "| - configure_env    - Configure virtual environment                               |"
 	echo "| - configure_kernel - Configure linux kernel in virtual environment configuration |"
 	echo "| - build_env        - Build virtual environment.                                  |"
+	echo "| - build_module     - Build text_to_morse kernel module                           |"
 	echo "| - clean_env        - Delete virtual environment                                  |"
 	echo "| - start_env        - Start virtual environment                                   |"
 	echo "| - stop_env         - Shutdown virtual environment                                |"
@@ -19,6 +20,9 @@ configure_kernel:
 
 build_env:
 	./scripts/build_buildroot.sh
+
+build_module:
+	./scripts/build_text_to_morse.sh
 
 clean_env:
 	./scripts/clean_buildroot.sh
@@ -40,6 +44,7 @@ login_kernel_log:
 	configure_env\
 	configure_kernel\
 	build_env\
+	build_module\
 	clean_env\
 	start_env\
 	stop_env\
@@ -51,6 +56,7 @@ login_kernel_log:
 	configure_env\
 	configure_kernel\
 	build_env\
+	build_module\
 	clean_env\
 	start_env\
 	stop_env\

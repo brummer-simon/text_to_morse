@@ -1,8 +1,10 @@
-# Bend KDIR to correct location
-KDIR ?= /lib/modules/`uname -r`/build
+obj-m := text_to_morse.o
 
-default:
-	$(MAKE) -C $(KDIR) M=$$PWD
+BUILDDIR ?= $$PWD/build
+SRCDIR ?= $$PWD/src
 
-modules_install: default
-	$(MAKE) -C $(KDIR) M=$$PWD modules_install
+modules:
+	$(MAKE) -C $(KDIR) M=$(BUILDDIR) src=$(SRCDIR) modules
+
+clean:
+	$(MAKE) -C $(KDIR) M=$(BUILDDIR) src=$(SRCDIR) clean

@@ -18,6 +18,11 @@ readonly BUILDROOT_HOST_BIN_DIR="${BUILDROOT_HOST_DIR}/bin"
 readonly BUILDROOT_HOST_RUSTUP_DIR="${BUILDROOT_HOST_DIR}/rustup"
 readonly BUILDROOT_HOST_CARGO_DIR="${BUILDROOT_HOST_DIR}/cargo"
 readonly BUILDROOT_HOST_CARGO_BIN_DIR="${BUILDROOT_HOST_CARGO_DIR}/bin"
+readonly BUILDROOT_KERNEL_BINARY="${BUILDROOT_ARTIFACT_DIR}/bzImage"
+readonly BUILDROOT_ROOTFS_BINARY="${BUILDROOT_ARTIFACT_DIR}/rootfs.ext2"
+
+# Out of tree kernel module paths
+readonly MODULE_TEXT_TO_MORSE="${WORK_DIR}/module_text_to_morse"
 
 # Temporary files
 readonly TMP_QEMU_PID_FILE="/tmp/kernel_hacking_environment.pid"
@@ -26,6 +31,7 @@ readonly TMP_KERNEL_PACKAGE_INFO_FILE="/tmp/kernel_package_info.json"
 # Other paths and values
 readonly BUILDROOT_CUSTOM_CONFIG="${WORK_DIR}/buildroot.config"
 readonly PASSWORD_FILE="${WORK_DIR}/.env_password"
+# TODO: Rename me
 readonly MAKE_OPTS="-C "${BUILDROOT_DIR}" O="${BUILDROOT_BUILD_DIR}" -s"
 readonly SSH_PORT="2222"
 readonly SSH_OPTS="-p ${SSH_PORT} \
@@ -37,10 +43,9 @@ readonly SSH_OPTS="-p ${SSH_PORT} \
                       root@localhost
                    "
 
-# Update path an other vital environment variables
+# Override environment variables used by used tooling
 RUSTUP_HOME="${BUILDROOT_HOST_RUSTUP_DIR}"
 CARGO_HOME="${BUILDROOT_HOST_CARGO_DIR}"
-
 PATH="${BUILDROOT_HOST_BIN_DIR}:${PATH}"
 
 # Internal functions
@@ -66,6 +71,22 @@ function _create_random_password_if_not_existing() {
 }
 
 # Exported functions
+function abort_if_buildroot_was_not_built() {
+    if [ ! -f "${BUILDROOT_KERNEL_BINARY}" ]
+    then
+        echo "Kernel binary not found at '${BUILDROOT_KERNEL_BINARY}'."\
+             "It was not built. Build via 'make build_env'."
+        exit 1
+    fi
+    if [ ! -f "${BUILDROOT_ROOTFS_BINARY}" ]
+    then
+        echo "Root filesystem not found at '${BUILDROOT_ROOTFS_BINARY}'."\
+             "It was not built. Build via 'make build_env'."
+        exit 1
+    fi
+}
+
+
 function abort_if_qemu_is_not_running() {
     if [ ! -e "${TMP_QEMU_PID_FILE}" ]
     then
@@ -87,7 +108,7 @@ function stop_qemu_if_running() {
     fi
 }
 
-function _query_kernel_package_info() {
+function query_kernel_package_info() {
     if [ ! -f "${TMP_KERNEL_PACKAGE_INFO_FILE}" ]
     then
         echo "Query package information of the configured linux kernel..."
@@ -95,7 +116,7 @@ function _query_kernel_package_info() {
     fi
 }
 
-function _get_kernel_version() {
+function get_kernel_version() {
     if [ ! -f "${TMP_KERNEL_PACKAGE_INFO_FILE}" ]
     then
         echo "Unable to determine linux version. query_kernel_package_info first".
@@ -105,14 +126,14 @@ function _get_kernel_version() {
     cat "${TMP_KERNEL_PACKAGE_INFO_FILE}" | jq ".linux.version" | tr -d '"'
 }
 
-function _get_kernel_build_dir() {
+function get_kernel_build_dir() {
     if [ ! -f "${TMP_KERNEL_PACKAGE_INFO_FILE}" ]
     then
         echo "Unable to determine linux version. query_kernel_package_info first".
         exit 1
     fi
 
-    DIR="$(cat "${TMP_KERNEL_PACKAGE_INFO_FILE}" | jq ".linux.build_dir" | tr -d '"')"
+    local DIR="$(cat "${TMP_KERNEL_PACKAGE_INFO_FILE}" | jq ".linux.build_dir" | tr -d '"')"
     echo "${BUILDROOT_BUILD_DIR}/${DIR}"
 }
 
@@ -121,8 +142,8 @@ function setup_rust_tooling() {
 
     # Examine linux sources to determine the required rust toolchain / bindgen version.
     # Unpack linux sources if needed
-    _query_kernel_package_info
-    local KERNEL_BUILD_DIR="$(_get_kernel_build_dir)"
+    query_kernel_package_info
+    local KERNEL_BUILD_DIR="$(get_kernel_build_dir)"
     local KERNEL_TOOL_VERSION_SCRIPT="${KERNEL_BUILD_DIR}scripts/min-tool-version.sh"
 
     if [ ! -x "${KERNEL_TOOL_VERSION_SCRIPT}" ]
@@ -132,7 +153,7 @@ function setup_rust_tooling() {
     fi
 
     # Extract required minimal versions
-    local KERNEL_VERSION="$(_get_kernel_version)"
+    local KERNEL_VERSION="$(get_kernel_version)"
     local MINIMUM_RUSTC_VERSION="$(${KERNEL_TOOL_VERSION_SCRIPT} rustc)"
     local MINIMUM_BINDGEN_VERSION="$(${KERNEL_TOOL_VERSION_SCRIPT} bindgen)"
 
@@ -243,6 +264,9 @@ export BUILDROOT_HOST_BIN_DIR
 export BUILDROOT_HOST_RUSTUP_DIR
 export BUILDROOT_HOST_CARGO_DIR
 export BUILDROOT_HOST_CARGO_BIN_DIR
+export BUILDROOT_KERNEL_BINARY
+export BUILDROOT_ROOTFS_BINARY
+export MODULE_TEXT_TO_MORSE
 
 export TMP_QEMU_PID_FILE
 export TMP_KERNEL_PACKAGE_INFO_FILE
@@ -257,6 +281,10 @@ export CARGO_HOME
 export PATH
 
 export -f preamble
+export -f abort_if_buildroot_was_not_built
 export -f abort_if_qemu_is_not_running
+export -f query_kernel_package_info
+export -f get_kernel_version
+export -f get_kernel_build_dir
 export -f setup_rust_tooling
 export -f stop_qemu_if_running
