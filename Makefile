@@ -1,3 +1,5 @@
+# TODO: Add meta build targets. Build, Clean
+
 help:
 	echo "+----------------------------------------------------------------------------------+"
 	echo "| This makefile supports the following targets:                                    |"
@@ -6,6 +8,7 @@ help:
 	echo "| - build_env        - Build virtual environment.                                  |"
 	echo "| - build_module     - Build text_to_morse kernel module                           |"
 	echo "| - clean_env        - Delete virtual environment                                  |"
+	echo "| - clean_module     - Delete text_to_morse kernel module artifacts                |"
 	echo "| - start_env        - Start virtual environment                                   |"
 	echo "| - stop_env         - Shutdown virtual environment                                |"
 	echo "| - login            - Login into virtual environment                              |"
@@ -27,6 +30,9 @@ build_module:
 clean_env:
 	./scripts/clean_buildroot.sh
 
+clean_module:
+	./scripts/clean_text_to_morse.sh
+
 start_env:
 	./scripts/start_qemu.sh
 
@@ -46,6 +52,7 @@ login_kernel_log:
 	build_env\
 	build_module\
 	clean_env\
+	clean_module\
 	start_env\
 	stop_env\
 	login\
@@ -58,6 +65,7 @@ login_kernel_log:
 	build_env\
 	build_module\
 	clean_env\
+	clean_module\
 	start_env\
 	stop_env\
 	login\

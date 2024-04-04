@@ -14,7 +14,7 @@ sed -i "s/^${KEY}=.*/${KEY}=\"${VALUE}\"/" "${BUILDROOT_CONFIG}"
 
 # Build development environment
 echo "Building 'buildroot'..."
-make ${BUILDROOT_MAKE_OPTS}
+make ${BUILDROOT_MAKE_OPTS} LLVM=1
 
 echo "Built 'buildroot' successfully"
 echo "Start development environment via 'make start_env'"

@@ -53,7 +53,7 @@ CARGO_HOME="${BUILDROOT_HOST_CARGO_DIR}"
 PATH="${BUILDROOT_HOST_BIN_DIR}:${PATH}"
 
 # Internal functions
-function _abort_if_buildroot_not_cloned() {
+function abort_if_buildroot_not_cloned() {
     if [ ! -f "${BUILDROOT_DIR}/Makefile" ]
     then
         echo "Error: git repository 'buildroot' empty."\
@@ -62,7 +62,7 @@ function _abort_if_buildroot_not_cloned() {
     fi
 }
 
-function _create_random_password_if_not_existing() {
+function create_random_password_if_not_existing() {
     CMD="head -c 40 /dev/urandom | base64 | tr -dc _A-Z-a-z-0-9; echo;"
     if [ ! -f "${SSH_PASSWORD_FILE}" ]
     then
@@ -111,7 +111,7 @@ function stop_qemu_if_running() {
 }
 
 function query_kernel_package_info() {
-    if [ "${1}" = "FORCE" ]
+    if [ "${1:-NOT_FORCE}" = "FORCE" ]
     then
         rm -f "${BUILDROOT_KERNEL_PACKAGE_INFO}"
     fi
@@ -239,8 +239,8 @@ function preamble() {
     mkdir -p "${BUILDROOT_HOST_BIN_DIR}"
 
     # Call sanity checks valid for each script
-    _abort_if_buildroot_not_cloned
-    _create_random_password_if_not_existing
+    abort_if_buildroot_not_cloned
+    create_random_password_if_not_existing
 
     if [ ! -e "${BUILDROOT_CONFIG}" ]
     then
@@ -270,6 +270,12 @@ export BUILDROOT_KERNAL_PACKAGE_INFO
 
 export TMP_QEMU_PID_FILE
 
+export MODULE_DIR
+export MODULE_TEXT_TO_MORSE_DIR
+
+export MODULE_BUILD_DIR
+export MODULE_TEXT_TO_MORSE_BUILD_DIR
+
 export BUILDROOT_CUSTOM_CONFIG
 export BUILDROOT_MAKE_OPTS
 export SSH_PASSWORD_FILE
@@ -281,6 +287,8 @@ export CARGO_HOME
 export PATH
 
 export -f preamble
+export -f abort_if_buildroot_not_cloned
+export -f create_random_password_if_not_existing
 export -f abort_if_buildroot_was_not_built
 export -f abort_if_qemu_is_not_running
 export -f query_kernel_package_info

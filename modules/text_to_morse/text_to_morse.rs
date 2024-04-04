@@ -9,6 +9,7 @@ module! {
 }
 
 struct TextToMorse {
+
 }
 
 impl kernel::Module for TextToMorse {
