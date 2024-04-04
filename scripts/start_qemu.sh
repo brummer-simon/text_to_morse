@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -o errexit -o pipefail
+set -o errexit -o pipefail -o nounset
 source "scripts/common.sh"
 preamble
 abort_if_buildroot_was_not_built

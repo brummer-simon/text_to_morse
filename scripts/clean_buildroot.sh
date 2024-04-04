@@ -1,10 +1,11 @@
 #!/bin/bash
 
-set -o errexit -o pipefail
+set -o errexit -o pipefail -o nounset
 source "scripts/common.sh"
 preamble
 stop_qemu_if_running
 
+# TODO: Fix. BUILD_DIR is created by the preamble function
 if [ ! -d "${BUILD_DIR}" ]
 then
     echo "Nothing to delete. Do nothing."

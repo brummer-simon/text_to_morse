@@ -1,4 +1,4 @@
-set -o errexit -o pipefail
+set -o errexit -o pipefail -o nounset
 
 # Define common variables
 declare BASE_DIR
@@ -9,7 +9,6 @@ readonly BUILD_DIR="${BASE_DIR}/build"
 
 # Buildroot paths
 readonly BUILDROOT_DIR="${ENV_DIR}/buildroot"
-readonly BUILDROOT_DOWNLOAD_DIR="${BUILDROOT_DIR}/dl"
 
 # Out of tree buildroot paths
 readonly BUILDROOT_BUILD_DIR="${BUILD_DIR}/buildroot"
@@ -256,7 +255,6 @@ export ENV_DIR
 export BUILD_DIR
 
 export BUILDROOT_DIR
-export BUILDROOT_DOWNLOAD_DIR
 
 export BUILDROOT_BUILD_DIR
 export BUILDROOT_CONFIG
