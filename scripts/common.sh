@@ -1,38 +1,43 @@
 set -o errexit -o pipefail
 
 # Define common variables
-declare WORK_DIR
-WORK_DIR="$(pwd)"
-readonly WORK_DIR
+declare BASE_DIR
+BASE_DIR="$(pwd)"
+readonly BASE_DIR
+readonly ENV_DIR="${BASE_DIR}/env"
+readonly BUILD_DIR="${BASE_DIR}/build"
 
 # Buildroot paths
-readonly BUILDROOT_DIR="${WORK_DIR}/buildroot"
+readonly BUILDROOT_DIR="${ENV_DIR}/buildroot"
 readonly BUILDROOT_DOWNLOAD_DIR="${BUILDROOT_DIR}/dl"
 
 # Out of tree buildroot paths
-readonly BUILDROOT_BUILD_DIR="${WORK_DIR}/buildroot_build"
+readonly BUILDROOT_BUILD_DIR="${BUILD_DIR}/buildroot"
 readonly BUILDROOT_CONFIG="${BUILDROOT_BUILD_DIR}/.config"
 readonly BUILDROOT_ARTIFACT_DIR="${BUILDROOT_BUILD_DIR}/images"
 readonly BUILDROOT_HOST_DIR="${BUILDROOT_BUILD_DIR}/host"
 readonly BUILDROOT_HOST_BIN_DIR="${BUILDROOT_HOST_DIR}/bin"
-readonly BUILDROOT_HOST_RUSTUP_DIR="${BUILDROOT_HOST_DIR}/rustup"
-readonly BUILDROOT_HOST_CARGO_DIR="${BUILDROOT_HOST_DIR}/cargo"
+readonly BUILDROOT_HOST_RUSTUP_DIR="${BUILDROOT_BUILD_DIR}/host_rustup"
+readonly BUILDROOT_HOST_CARGO_DIR="${BUILDROOT_BUILD_DIR}/host_cargo"
 readonly BUILDROOT_HOST_CARGO_BIN_DIR="${BUILDROOT_HOST_CARGO_DIR}/bin"
 readonly BUILDROOT_KERNEL_BINARY="${BUILDROOT_ARTIFACT_DIR}/bzImage"
 readonly BUILDROOT_ROOTFS_BINARY="${BUILDROOT_ARTIFACT_DIR}/rootfs.ext2"
+readonly BUILDROOT_KERNEL_PACKAGE_INFO="${BUILDROOT_BUILD_DIR}/kernel_package_info.json"
 
 # Out of tree kernel module paths
-readonly MODULE_TEXT_TO_MORSE="${WORK_DIR}/module_text_to_morse"
+readonly MODULE_DIR="${BASE_DIR}/modules"
+readonly MODULE_TEXT_TO_MORSE_DIR="${MODULE_DIR}/text_to_morse"
+
+readonly MODULE_BUILD_DIR="${BUILD_DIR}/modules"
+readonly MODULE_TEXT_TO_MORSE_BUILD_DIR="${MODULE_BUILD_DIR}/text_to_morse"
 
 # Temporary files
 readonly TMP_QEMU_PID_FILE="/tmp/kernel_hacking_environment.pid"
-readonly TMP_KERNEL_PACKAGE_INFO_FILE="/tmp/kernel_package_info.json"
 
 # Other paths and values
-readonly BUILDROOT_CUSTOM_CONFIG="${WORK_DIR}/buildroot.config"
-readonly PASSWORD_FILE="${WORK_DIR}/.env_password"
-# TODO: Rename me
-readonly MAKE_OPTS="-C "${BUILDROOT_DIR}" O="${BUILDROOT_BUILD_DIR}" -s"
+readonly BUILDROOT_CUSTOM_CONFIG="${ENV_DIR}/buildroot.config"
+readonly BUILDROOT_MAKE_OPTS="-C "${BUILDROOT_DIR}" O="${BUILDROOT_BUILD_DIR}" -s"
+readonly SSH_PASSWORD_FILE="${BUILDROOT_BUILD_DIR}/ssh_password"
 readonly SSH_PORT="2222"
 readonly SSH_OPTS="-p ${SSH_PORT} \
                    -o StrictHostKeyChecking=no \
@@ -60,13 +65,13 @@ function _abort_if_buildroot_not_cloned() {
 
 function _create_random_password_if_not_existing() {
     CMD="head -c 40 /dev/urandom | base64 | tr -dc _A-Z-a-z-0-9; echo;"
-    if [ ! -f "${PASSWORD_FILE}" ]
+    if [ ! -f "${SSH_PASSWORD_FILE}" ]
     then
-        eval "${CMD}" > "${PASSWORD_FILE}"
+        eval "${CMD}" > "${SSH_PASSWORD_FILE}"
 
-    elif [ -z "$(cat "${PASSWORD_FILE}")" ]
+    elif [ -z "$(cat "${SSH_PASSWORD_FILE}")" ]
     then
-        eval "${CMD}" > "${PASSWORD_FILE}"
+        eval "${CMD}" > "${SSH_PASSWORD_FILE}"
     fi
 }
 
@@ -86,7 +91,6 @@ function abort_if_buildroot_was_not_built() {
     fi
 }
 
-
 function abort_if_qemu_is_not_running() {
     if [ ! -e "${TMP_QEMU_PID_FILE}" ]
     then
@@ -95,7 +99,6 @@ function abort_if_qemu_is_not_running() {
         exit 1
     fi
 }
-
 
 function stop_qemu_if_running() {
     if [ -e "${TMP_QEMU_PID_FILE}" ]
@@ -109,31 +112,36 @@ function stop_qemu_if_running() {
 }
 
 function query_kernel_package_info() {
-    if [ ! -f "${TMP_KERNEL_PACKAGE_INFO_FILE}" ]
+    if [ "${1}" = "FORCE" ]
+    then
+        rm -f "${BUILDROOT_KERNEL_PACKAGE_INFO}"
+    fi
+
+    if [ ! -f "${BUILDROOT_KERNEL_PACKAGE_INFO}" ]
     then
         echo "Query package information of the configured linux kernel..."
-        make ${MAKE_OPTS} linux-show-info > "${TMP_KERNEL_PACKAGE_INFO_FILE}"
+        make ${BUILDROOT_MAKE_OPTS} linux-show-info > "${BUILDROOT_KERNEL_PACKAGE_INFO}"
     fi
 }
 
 function get_kernel_version() {
-    if [ ! -f "${TMP_KERNEL_PACKAGE_INFO_FILE}" ]
+    if [ ! -f "${BUILDROOT_KERNEL_PACKAGE_INFO}" ]
     then
-        echo "Unable to determine linux version. query_kernel_package_info first".
+        echo "Unable to determine linux version. Call query_kernel_package_info first".
         exit 1
     fi
 
-    cat "${TMP_KERNEL_PACKAGE_INFO_FILE}" | jq ".linux.version" | tr -d '"'
+    cat "${BUILDROOT_KERNEL_PACKAGE_INFO}" | jq ".linux.version" | tr -d '"'
 }
 
 function get_kernel_build_dir() {
-    if [ ! -f "${TMP_KERNEL_PACKAGE_INFO_FILE}" ]
+    if [ ! -f "${BUILDROOT_KERNEL_PACKAGE_INFO}" ]
     then
-        echo "Unable to determine linux version. query_kernel_package_info first".
+        echo "Unable to determine linux version. Call query_kernel_package_info first".
         exit 1
     fi
 
-    local DIR="$(cat "${TMP_KERNEL_PACKAGE_INFO_FILE}" | jq ".linux.build_dir" | tr -d '"')"
+    local DIR="$(cat "${BUILDROOT_KERNEL_PACKAGE_INFO}" | jq ".linux.build_dir" | tr -d '"')"
     echo "${BUILDROOT_BUILD_DIR}/${DIR}"
 }
 
@@ -149,7 +157,7 @@ function setup_rust_tooling() {
     if [ ! -x "${KERNEL_TOOL_VERSION_SCRIPT}" ]
     then
         echo "Linux sources not found. Fetch and unpack them..."
-        make ${MAKE_OPTS} linux-extract
+        make ${BUILDROOT_MAKE_OPTS} linux-extract
     fi
 
     # Extract required minimal versions
@@ -164,13 +172,11 @@ function setup_rust_tooling() {
     # Check rust installation
     local INSTALL_RUST="no"
 
-    # Install if not found
     if [ ! -x "${BUILDROOT_HOST_BIN_DIR}/rustc" ]
     then
         echo "Rust toolchain not found. Install it."
         INSTALL_RUST="yes"
 
-    # Install if version does not match
     elif [ ! "$(${BUILDROOT_HOST_BIN_DIR}/rustc --version | awk '{print $2}')" = "${MINIMUM_RUSTC_VERSION}" ]
     then
         echo "Rust toolchain version does not match kernel expectency. Install it."
@@ -183,10 +189,8 @@ function setup_rust_tooling() {
             rm -f "${BUILDROOT_HOST_BIN_DIR}/$(basename "${BINARY}")"
         done
 
-    # Don't install. Everything is fine.
     else
         echo "Rust toolchain (${MINIMUM_RUSTC_VERSION}) meets kernel expectency."
-        INSTALL_RUST="no"
     fi
 
     if [ "${INSTALL_RUST}" = "yes" ]
@@ -199,10 +203,7 @@ function setup_rust_tooling() {
         local TOOLCHAIN_BIN_DIR="$(dirname "$(rustup which rustc)")"
         for BINARY in "${TOOLCHAIN_BIN_DIR}"/*
         do
-            if [ -x "${BINARY}" ]
-            then
-                ln -sf "${BINARY}" "${BUILDROOT_HOST_BIN_DIR}"
-            fi
+            ln -sf "${BINARY}" "${BUILDROOT_HOST_BIN_DIR}"
         done
     fi
 
@@ -214,17 +215,14 @@ function setup_rust_tooling() {
         echo "Bindgen not found. Install it."
         INSTALL_BINDGEN="yes"
 
-    # Install if version does not match
     elif [ ! "$(${BUILDROOT_HOST_BIN_DIR}/bindgen --version | awk '{print $2}')" = "${MINIMUM_BINDGEN_VERSION}" ]
     then
         echo "Bindgen version does not match kernel expectency. Install it."
         rm -f "${BUILDROOT_HOST_BIN_DIR}/bindgen"
         INSTALL_BINDGEN="yes"
 
-    # Don't install. Everything is fine.
     else
         echo "Bindgen (${MINIMUM_BINDGEN_VERSION}) meets kernel expectency."
-        INSTALL_BINDGEN="no"
     fi
 
     # Install bindgen installation
@@ -236,23 +234,27 @@ function setup_rust_tooling() {
 }
 
 function preamble() {
+    # Prepare directories
+    mkdir -p "${BUILD_DIR}"
+    mkdir -p "${BUILDROOT_BUILD_DIR}"
+    mkdir -p "${BUILDROOT_HOST_BIN_DIR}"
+
     # Call sanity checks valid for each script
     _abort_if_buildroot_not_cloned
     _create_random_password_if_not_existing
 
-    # Prepare directories
-    mkdir -p "${BUILDROOT_BUILD_DIR}"
-    mkdir -p ${BUILDROOT_HOST_BIN_DIR}
-
     if [ ! -e "${BUILDROOT_CONFIG}" ]
     then
         echo "Buildroot config does not exist. Create it."
-        make ${MAKE_OPTS} defconfig BR2_DEFCONFIG="${BUILDROOT_CUSTOM_CONFIG}"
+        make ${BUILDROOT_MAKE_OPTS} defconfig BR2_DEFCONFIG="${BUILDROOT_CUSTOM_CONFIG}"
     fi
 }
 
 # Export symbols to outer environment
-export WORK_DIR
+export BASE_DIR
+export ENV_DIR
+export BUILD_DIR
+
 export BUILDROOT_DIR
 export BUILDROOT_DOWNLOAD_DIR
 
@@ -266,16 +268,16 @@ export BUILDROOT_HOST_CARGO_DIR
 export BUILDROOT_HOST_CARGO_BIN_DIR
 export BUILDROOT_KERNEL_BINARY
 export BUILDROOT_ROOTFS_BINARY
-export MODULE_TEXT_TO_MORSE
+export BUILDROOT_KERNAL_PACKAGE_INFO
 
 export TMP_QEMU_PID_FILE
-export TMP_KERNEL_PACKAGE_INFO_FILE
 
 export BUILDROOT_CUSTOM_CONFIG
-export PASSWORD_FILE
-export MAKE_OPTS
+export BUILDROOT_MAKE_OPTS
+export SSH_PASSWORD_FILE
 export SSH_PORT
 export SSH_OPTS
+
 export RUSTUP_HOME
 export CARGO_HOME
 export PATH

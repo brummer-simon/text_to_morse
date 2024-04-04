@@ -6,9 +6,8 @@ preamble
 abort_if_buildroot_was_not_built
 stop_qemu_if_running
 
-readonly QEMU_BINARY="${BUILDROOT_HOST_BIN_DIR}/qemu-system-x86_64"
-
 # Sanity checks
+readonly QEMU_BINARY="${BUILDROOT_HOST_BIN_DIR}/qemu-system-x86_64"
 if [ ! -f "${QEMU_BINARY}" ]
 then
     echo "Qemu binary not found at '${QEMU_BINARY}'."\

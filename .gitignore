@@ -1,6 +1,5 @@
 # Buildroot
-buildroot_build/
-.env_password
+build/
 
 # Rust
 debug/
@@ -8,6 +7,3 @@ target/
 Cargo.lock
 **/*.rs.bk
 *.pdb
-
-# Kernel Module artifacts
-module_text_to_morse/build/

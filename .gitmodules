@@ -1,3 +1,3 @@
 [submodule "buildroot"]
-	path = buildroot
+	path = env/buildroot
 	url = git@github.com:buildroot/buildroot.git

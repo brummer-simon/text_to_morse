@@ -66,6 +66,7 @@ Mandatory:
 - sshpass
 - jq
 - rustup
+- awk
 
 Optional:
 TODO (add dependencies to build slides as soon as they exist)

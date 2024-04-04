@@ -5,7 +5,7 @@ source "scripts/common.sh"
 preamble
 stop_qemu_if_running
 
-if [ ! -e "${BUILDROOT_BUILD_DIR}/Makefile" ]
+if [ ! -d "${BUILD_DIR}" ]
 then
     echo "Nothing to delete. Do nothing."
     exit 0
@@ -22,7 +22,5 @@ then
 fi
 
 echo "Deleting development environment..."
-rm -rf "${BUILDROOT_BUILD_DIR}"
-rm -rf "${PASSWORD_FILE}"
+rm -rf "${BUILD_DIR}"
 rm -rf "${TMP_QEMU_PID_FILE}"
-rm -rf "${TMP_KERNEL_PACKAGE_INFO_FILE}"
