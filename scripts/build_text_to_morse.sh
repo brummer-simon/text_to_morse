@@ -1,5 +1,7 @@
 #!/bin/bash
 
+# TODO: Goldpating: Measure build time
+
 set -o errexit -o pipefail -o nounset
 source "scripts/common.sh"
 preamble
