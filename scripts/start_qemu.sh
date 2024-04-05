@@ -18,7 +18,7 @@ fi
 # Spawn development environment via qemu (buildroot version)
 ${QEMU_BINARY} \
     -M pc \
-    -kernel "${BUILDROOT_KERNEL_BINARY}" \
+    -kernel "${LINUX_KERNEL_BINARY}" \
     -drive file="${BUILDROOT_ROOTFS_BINARY}",if=virtio,format=raw \
     -append "rootwait root=/dev/vda console=tty1 console=ttyS0" \
     -net nic,model=virtio \

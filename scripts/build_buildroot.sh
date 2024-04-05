@@ -5,7 +5,7 @@ set -o errexit -o pipefail -o nounset
 source "scripts/common.sh"
 preamble
 stop_qemu_if_running
-setup_rust_tooling
+setup_buildroot_config
 
 # Replace empty the root password with the generated password.
 KEY="BR2_TARGET_GENERIC_ROOT_PASSWD"
@@ -14,7 +14,10 @@ sed -i "s/^${KEY}=.*/${KEY}=\"${VALUE}\"/" "${BUILDROOT_CONFIG}"
 
 # Build development environment
 echo "Building 'buildroot'..."
-make ${BUILDROOT_MAKE_OPTS} LLVM=1
+make ${BUILDROOT_MAKE_OPTS}
 
 echo "Built 'buildroot' successfully"
-echo "Start development environment via 'make start_env'"
+
+# Strip password from config file to prevent ending up in
+# version controlled buildroot.config after reconfiguration
+sed -i "s/^${KEY}=\"${VALUE}\"/${KEY}=\"\"/" "${BUILDROOT_CONFIG}"

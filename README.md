@@ -1,3 +1,5 @@
+# TODO: Adjust to major refactoring
+
 # text_to_morse
 
 A linux kernel module to convert text to morse code written in Rust! This repository
@@ -67,6 +69,7 @@ Mandatory:
 - jq
 - rustup
 - awk
+- llvm
 
 Optional:
 TODO (add dependencies to build slides as soon as they exist)
