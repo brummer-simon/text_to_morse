@@ -1,5 +1,7 @@
 # TODO: Add target to generate the kernel documentation for rust
-# TODO: Make module building generic
+
+# Currently selected kernel module to build
+MODULE_NAME ?= "text_to_morse"
 
 help:
 	echo "This makefile supports the following targets:"
@@ -47,7 +49,7 @@ build_linux:
 	./scripts/build_linux.sh
 
 build_module:
-	./scripts/build_text_to_morse.sh
+	./scripts/build_module.sh $(MODULE_NAME)
 
 # Clean targets
 clean_env:
@@ -60,7 +62,7 @@ clean_linux:
 	./scripts/clean_linux.sh
 
 clean_module:
-	./scripts/clean_text_to_morse.sh
+	./scripts/clean_module.sh $(MODULE_NAME)
 
 # Environment targets
 start_env:

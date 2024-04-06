@@ -42,12 +42,10 @@ readonly LINUX_MAKE_OPTS
 # Linux modules: paths
 readonly MODULE_DIR="${BASE_DIR}/modules"
 readonly MODULE_BUILD_DIR="${BUILD_DIR}/modules"
-readonly MODULE_TEXT_TO_MORSE_DIR="${MODULE_DIR}/text_to_morse"
-readonly MODULE_TEXT_TO_MORSE_BUILD_DIR="${MODULE_BUILD_DIR}/text_to_morse"
 
 # Linux modules: other
 declare MODULE_MAKE_OPTS
-MODULE_MAKE_OPTS="-j$(nproc) LLVM=1 KDIR=${LINUX_BUILD_DIR}"
+MODULE_MAKE_OPTS="-j$(nproc) LLVM=1 LINUX_BUILD_DIR=${LINUX_BUILD_DIR}"
 readonly MODULE_MAKE_OPTS
 
 # Rust: paths
@@ -297,8 +295,6 @@ export LINUX_MAKE_OPTS
 # Linux modules: paths
 export MODULE_DIR
 export MODULE_BUILD_DIR
-export MODULE_TEXT_TO_MORSE_DIR
-export MODULE_TEXT_TO_MORSE_BUILD_DIR
 
 # Linux modules: other
 export MODULE_MAKE_OPTS

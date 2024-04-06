@@ -47,7 +47,7 @@ the environment type `exit`.
 
 ### Kernel module development workflow
 
-TODO Add instructions
+TODO Describe workflow instructions
 
 ### Useful make targets
 
@@ -87,9 +87,21 @@ was changed in the following way:
 - Add vim
 - Add zsh
 
-## Do I integrate my own modules into the development environment?
+## How to integrate my own modules?
 
-TODO Add instructions
+1) Use text_to_morse as template:
+    ```
+    cp -r modules/text_to_morse modules/<module_name>
+    ```
+
+2) Set new module temporarily for module related targets (e.g. build_module):
+    ```
+    make MODULE_NAME=<module name> build_module
+    ```
+
+3) Set new module as selected default module: Rewrite variable "MODULE_NAME" in Makefile.
+4) Start development by editing 'modules/<module_name>/module.rs'
+
 
 ## Special thanks
 
