@@ -36,11 +36,7 @@ In order to provide a convenient user experience of all of those steps are scrip
    ```
 3) Build the development environment (full build takes ~45m):
    ```
-   make build_env
-   ```
-4) Login:
-   ```
-   make login
+   make build_env login
    ```
 
 On success, you are greeted by the message:

@@ -64,7 +64,7 @@ then
     echo "Creating rust-project.json for 'linux sources'..."
     SECONDS=0
     # shellcheck disable=SC2086 # Deliberate word splitting
-    make ${LINUX_MAKE_OPTS} rustdoc
+    make ${LINUX_MAKE_OPTS} rust-analyzer
     cp "${LINUX_BUILD_DIR}/rust-project.json" "${BASE_DIR}/rust-project.json"
 
     SEC="${SECONDS}"

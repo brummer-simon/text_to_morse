@@ -1,5 +1,3 @@
-# TODO: Add deployment & load/unload targets
-
 # Currently selected kernel module to build
 MODULE_NAME ?= "text_to_morse"
 
@@ -25,15 +23,15 @@ help:
 	echo "    - clean_linux     - Delete linux kernel build artifacts"
 	echo "    - clean_module    - Delete out-of-tree kernel module build artifacts"
 	echo
-	echo "Tooling targets:"
+	echo "Development targets:"
+	echo "    - load_module      - Deploy kernel module into linux environment and load it"
+	echo "    - unload_module    - Unload kernel module"
 	echo "    - start_env        - Start linux environment"
 	echo "    - stop_env         - Shutdown linux environment"
 	echo "    - login            - Login into linux environment"
 	echo "    - login_kernel_log - Login into linux environment and follow kernel log"
 	echo "    - open_rustdoc     - Open rustdoc for linux kernel facilities."
-	echo
-	echo "Development targets:"
-	echo "    - shellcheck - Check bash scripts under scripts"
+	echo "    - shellcheck       - Check bash scripts under scripts"
 
 # Configuration targets
 configure_buildroot:
@@ -77,7 +75,13 @@ clean_linux:
 clean_module:
 	./scripts/clean_module.sh $(MODULE_NAME)
 
-# Tooling targets
+# Development targets
+load_module:
+	./scripts/load_module.sh $(MODULE_NAME)
+
+unload_module:
+	./scripts/unload_module.sh $(MODULE_NAME)
+
 start_env:
 	./scripts/start_qemu.sh
 
@@ -93,7 +97,6 @@ login_kernel_log:
 open_rustdoc:
 	./scripts/open_rustdoc.sh
 
-# Development targets
 shellcheck:
 	shellcheck -a -s bash scripts/*
 
@@ -110,6 +113,8 @@ shellcheck:
 	build_env\
 	clean_env\
 	clean_module\
+	load_module\
+	unload_module\
 	start_env\
 	stop_env\
 	login\
@@ -130,6 +135,8 @@ shellcheck:
 	build_env\
 	clean_env\
 	clean_module\
+	load_module\
+	unload_module\
 	start_env\
 	stop_env\
 	login\

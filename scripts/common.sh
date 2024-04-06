@@ -59,15 +59,25 @@ readonly TMP_QEMU_PID_FILE="/tmp/kernel_hacking_environment.pid"
 readonly SSH_PASSWORD_FILE="${BUILD_DIR}/ssh_password"
 
 # Tools: other
+readonly BOOT_DURATION="15"
 readonly SSH_PORT="2222"
+readonly SSH_TARGET="root@localhost"
 readonly SSH_OPTS="-p ${SSH_PORT} \
                    -o StrictHostKeyChecking=no \
                    -o PubkeyAuthentication=no \
                    -o PreferredAuthentications=password \
                    -o UserKnownHostsFile=/dev/null \
                    -o LogLevel=ERROR \
-                      root@localhost
+                      ${SSH_TARGET}
                    "
+readonly SCP_OPTS="-P ${SSH_PORT} \
+                   -o StrictHostKeyChecking=no \
+                   -o PubkeyAuthentication=no \
+                   -o PreferredAuthentications=password \
+                   -o UserKnownHostsFile=/dev/null \
+                   -o LogLevel=ERROR
+                   "
+
 
 # Overrides: paths
 RUSTUP_HOME="${RUSTUP_DIR}"
@@ -310,8 +320,11 @@ export TMP_QEMU_PID_FILE
 export SSH_PASSWORD_FILE
 
 # Tools: other
+export BOOT_DURATION
+export SSH_TARGET
 export SSH_PORT
 export SSH_OPTS
+export SCP_OPTS
 
 # Overrides: paths
 export RUSTUP_HOME

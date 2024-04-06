@@ -9,7 +9,7 @@ then
     echo "Development environment is not running. Start it."
     make -s -C "${BASE_DIR}" start_env
     echo "Wait a moment before attempting login..."
-    sleep 5
+    sleep "${BOOT_DURATION}"
 fi
 
 # shellcheck disable=SC2086 # Deliberate word splitting
