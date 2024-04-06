@@ -2,16 +2,17 @@
 
 set -o errexit -o pipefail -o nounset
 source "scripts/common.sh"
-preamble
+abort_if_buildroot_not_cloned
+abort_if_linux_not_cloned
 stop_qemu_if_running
 
-if [ ! -d "${BUILDROOT_BUILD_DIR}" ]
+if [ ! -d "${BUILD_DIR}" ]
 then
     echo "Noting to clean."
     exit 0
 fi
 
-echo -n "Rebuilding 'buildroot' takes a while."\
+echo -n "Rebuilding everything takes a while."\
         "Enter 'YES' to continue cleaning: "
 
 read CONFIRM
@@ -21,7 +22,7 @@ then
     exit 0
 fi
 
-echo "Cleaning buildroot..."
-rm -rf "${BUILDROOT_BUILD_DIR}"
+echo "Cleaning development environment..."
+rm -rf "${BUILD_DIR}"
 
-echo "Buildroot cleaned."
+echo "development environment cleaned."

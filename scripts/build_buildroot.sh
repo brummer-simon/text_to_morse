@@ -1,7 +1,6 @@
 #!/bin/bash
 
 # TODO: Take architecture into account for cross-compiling
-# TODO: Goldpating: Measure build time
 set -o errexit -o pipefail -o nounset
 source "scripts/common.sh"
 preamble
@@ -15,9 +14,11 @@ sed -i "s/^${KEY}=.*/${KEY}=\"${VALUE}\"/" "${BUILDROOT_CONFIG}"
 
 # Build development environment
 echo "Building 'buildroot'..."
+SECONDS=0
 make ${BUILDROOT_MAKE_OPTS}
-
-echo "Built 'buildroot' successfully"
+readonly SEC="${SECONDS}"
+readonly DURATION="$((SEC / 3600))h $((SEC % 3600 / 60))m $((SEC % 60))s"
+echo "Built 'buildroot' successfully. Build took ${DURATION}"
 
 # Strip password from config file to prevent ending up in
 # version controlled buildroot.config after reconfiguration

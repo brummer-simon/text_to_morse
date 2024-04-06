@@ -1,3 +1,4 @@
+# TODO: Reorganize variables and stuff
 set -o errexit -o pipefail -o nounset
 
 # Define common variables
@@ -29,7 +30,10 @@ readonly LINUX_CONFIG="${LINUX_BUILD_DIR}/.config"
 readonly LINUX_DEFCONFIG_QEMU="${LINUX_DIR}/arch/x86/configs/qemu_defconfig"
 
 readonly LINUX_CUSTOM_CONFIG="${ENV_DIR}/linux.config"
-readonly LINUX_MAKE_OPTS="-j"$(nproc)" LLVM=1 -C "${LINUX_DIR}" O="${LINUX_BUILD_DIR}""
+
+declare LINUX_MAKE_OPTS
+LINUX_MAKE_OPTS="-j"$(nproc)" LLVM=1 -C "${LINUX_DIR}" O="${LINUX_BUILD_DIR}""
+readonly LINUX_MAKE_OPTS
 
 readonly LINUX_KERNEL_BINARY="${LINUX_BUILD_DIR}/arch/x86/boot/bzImage"
 
@@ -166,7 +170,9 @@ function setup_rust_tooling() {
         INSTALL_RUST="yes"
 
         # Cleanup: symlinks from current toolchain
-        local TOOLCHAIN_BIN_DIR="$(dirname "$(rustup which rustc)")"
+        local TOOLCHAIN_BIN_DIR
+        TOOLCHAIN_BIN_DIR="$(dirname "$(rustup which rustc)")"
+
         for BINARY in "${TOOLCHAIN_BIN_DIR}"/*
         do
             rm -f "${RUSTUP_BIN_DIR}/$(basename "${BINARY}")"
@@ -185,7 +191,9 @@ function setup_rust_tooling() {
         rustup override set ${MINIMUM_RUSTC_VERSION}
         rustup component add rust-src
 
-        local TOOLCHAIN_BIN_DIR="$(dirname "$(rustup which rustc)")"
+        local TOOLCHAIN_BIN_DIR
+        TOOLCHAIN_BIN_DIR="$(dirname "$(rustup which rustc)")"
+
         for BINARY in "${TOOLCHAIN_BIN_DIR}"/*
         do
             ln -sf "${BINARY}" "${RUSTUP_BIN_DIR}"

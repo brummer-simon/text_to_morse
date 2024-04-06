@@ -4,6 +4,7 @@ set -o errexit -o pipefail -o nounset
 source "scripts/common.sh"
 preamble
 abort_if_buildroot_was_not_built
+abort_if_linux_was_not_built
 stop_qemu_if_running
 
 # Sanity checks

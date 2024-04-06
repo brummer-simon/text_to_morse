@@ -5,13 +5,13 @@ source "scripts/common.sh"
 preamble
 stop_qemu_if_running
 
-if [ ! -d "${BUILDROOT_BUILD_DIR}" ]
+if [ ! -d "${LINUX_BUILD_DIR}" ]
 then
     echo "Noting to clean."
     exit 0
 fi
 
-echo -n "Rebuilding 'buildroot' takes a while."\
+echo -n "Rebuilding 'linux' takes a while."\
         "Enter 'YES' to continue cleaning: "
 
 read CONFIRM
@@ -21,7 +21,7 @@ then
     exit 0
 fi
 
-echo "Cleaning buildroot..."
-rm -rf "${BUILDROOT_BUILD_DIR}"
+echo "Clean linux..."
+rm -rf "${LINUX_BUILD_DIR}"
 
-echo "Buildroot cleaned."
+echo "Linux cleaned."
