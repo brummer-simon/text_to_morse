@@ -7,6 +7,7 @@ abort_if_linux_was_not_built
 
 # Query kernel build directory and execute out-of-tree build against it.
 echo "Clean module text_to_morse..."
+# shellcheck disable=SC2086 # Deliberate word splitting
 make ${MODULE_MAKE_OPTS} BUILDDIR="${MODULE_TEXT_TO_MORSE_BUILD_DIR}" -C "${MODULE_TEXT_TO_MORSE_DIR}" clean
 
 echo "Module text_to_morse cleaned."

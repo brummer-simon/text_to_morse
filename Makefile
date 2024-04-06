@@ -1,5 +1,4 @@
 # TODO: Add target to generate the kernel documentation for rust
-# TODO: Add shellcheck target
 
 help:
 	echo "This makefile supports the following targets:"
@@ -20,11 +19,14 @@ help:
 	echo "    - clean_linux         - Delete linux kernel build artifacts"
 	echo "    - clean_module        - Delete out-of-tree kernel module build artifacts"
 	echo
-	echo "Other targets:"
+	echo "Environment targets:"
 	echo "    - start_env           - Start linux environment"
 	echo "    - stop_env            - Shutdown linux environment"
 	echo "    - login               - Login into linux environment"
 	echo "    - login_kernel_log    - Login into linux environment and follow kernel log"
+	echo
+	echo "Development targets:"
+	echo "    - shellcheck          - Check bash scripts under scripts"
 
 # Configuration targets
 configure_buildroot:
@@ -35,9 +37,7 @@ configure_linux:
 
 # Build targets
 build_env:
-	./scripts/build_buildroot.sh
-	./scripts/build_linux.sh
-	./scripts/build_text_to_morse.sh
+	./scripts/build_env.sh
 
 build_buildroot:
 	./scripts/build_buildroot.sh
@@ -61,7 +61,7 @@ clean_linux:
 clean_module:
 	./scripts/clean_text_to_morse.sh
 
-# Other targets
+# Environment targets
 start_env:
 	./scripts/start_qemu.sh
 
@@ -73,6 +73,10 @@ login:
 
 login_kernel_log:
 	./scripts/login_qemu_kernel_log.sh
+
+# Development targets
+shellcheck:
+	shellcheck -a -s bash scripts/*
 
 .PHONY:\
 	help\
@@ -87,7 +91,8 @@ login_kernel_log:
 	start_env\
 	stop_env\
 	login\
-	login_kernel_log
+	login_kernel_log\
+	shellcheck
 
 .SILENT:\
 	help\
@@ -102,4 +107,5 @@ login_kernel_log:
 	start_env\
 	stop_env\
 	login\
-	login_kernel_log
+	login_kernel_log\
+	shellcheck

@@ -7,14 +7,14 @@ stop_qemu_if_running
 
 if [ ! -d "${BUILDROOT_BUILD_DIR}" ]
 then
-    echo "Noting to clean."
+    echo "Nothing to clean."
     exit 0
 fi
 
 echo -n "Rebuilding 'buildroot' takes a while."\
         "Enter 'YES' to continue cleaning: "
 
-read CONFIRM
+read -r CONFIRM
 if [ ! "${CONFIRM}" = "YES" ]
 then
     echo "Operation aborted by user. Do nothing."

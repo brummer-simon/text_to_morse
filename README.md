@@ -69,9 +69,10 @@ Mandatory:
 - jq
 - rustup
 - awk
-- llvm
+- llvm (for Linux build)
 
 Optional:
+- shellcheck (for script verification)
 TODO (add dependencies to build slides as soon as they exist)
 
 ### Image adjustments

@@ -26,7 +26,7 @@ ${QEMU_BINARY} \
     -net user,hostfwd=tcp::${SSH_PORT}-:22 \
     -daemonize > /dev/null 2>&1
 
-PID=$(pidof ${QEMU_BINARY})
+PID=$(pidof "${QEMU_BINARY}")
 
 if [ -z "${PID}" ]
 then
