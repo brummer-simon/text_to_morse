@@ -1,6 +1,5 @@
 # Buildroot
-buildroot_build/
-.env_password
+build/
 
 # Rust
 debug/

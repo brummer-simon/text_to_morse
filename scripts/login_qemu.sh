@@ -1,10 +1,18 @@
 #!/bin/bash
 
-set -o errexit -o pipefail
+set -o errexit -o pipefail -o nounset
 source "scripts/common.sh"
 preamble
-abort_if_qemu_is_not_running
+
+if [ ! -e "${TMP_QEMU_PID_FILE}" ]
+then
+    echo "Development environment is not running. Start it."
+    make -s -C "${BASE_DIR}" start_env
+    echo "Wait a moment before attempting login..."
+    sleep 5
+fi
 
 # Note: Drop return code. Although the login works it returns an non
 # zero return code on exit causing the script to fail. || true prevents it.
-sshpass -f "${PASSWORD_FILE}" ssh ${SSH_OPTS} || true
+# shellcheck disable=SC2086 # Deliberate word splitting
+sshpass -f "${SSH_PASSWORD_FILE}" ssh ${SSH_OPTS} || true
