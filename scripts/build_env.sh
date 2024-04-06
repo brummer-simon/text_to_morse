@@ -9,7 +9,7 @@ SECONDS=0
 
 make -s -C "${BASE_DIR}" build_buildroot
 make -s -C "${BASE_DIR}" build_linux
-make -s -C "${BASE_DIR}" build_modules
+make -s -C "${BASE_DIR}" build_module
 
 readonly SEC="${SECONDS}"
 readonly DURATION="$((SEC / 3600))h $((SEC % 3600 / 60))m $((SEC % 60))s"

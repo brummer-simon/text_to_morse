@@ -127,15 +127,6 @@ function abort_if_linux_was_not_built() {
     fi
 }
 
-function abort_if_qemu_is_not_running() {
-    if [ ! -e "${TMP_QEMU_PID_FILE}" ]
-    then
-        echo "Virtual linux environment not running."\
-             "Start it via 'make start_env'"
-        exit 1
-    fi
-}
-
 function stop_qemu_if_running() {
     if [ -e "${TMP_QEMU_PID_FILE}" ]
     then
@@ -164,7 +155,6 @@ function setup_rust_tooling() {
     local KERNEL_VERSION
     # shellcheck disable=SC2086 # Deliberate word splitting
     KERNEL_VERSION="$(make ${LINUX_MAKE_OPTS} -s kernelversion)"
-
 
     echo "Linux kernel (${KERNEL_VERSION}) expects:"
     echo "    - rustc (${MINIMUM_RUSTC_VERSION})"
@@ -201,8 +191,10 @@ function setup_rust_tooling() {
         mkdir -p "${RUSTUP_BIN_DIR}"
 
         # Build required rust version and link tooling it to host bin location
-        rustup install "${MINIMUM_RUSTC_VERSION}"
-        rustup override set "${MINIMUM_RUSTC_VERSION}"
+        # shellcheck disable=SC2086 # Deliberate word splitting
+        rustup install ${MINIMUM_RUSTC_VERSION}
+        # shellcheck disable=SC2086 # Deliberate word splitting
+        rustup override set ${MINIMUM_RUSTC_VERSION}
         rustup component add rust-src
 
         local TOOLCHAIN_BIN_DIR
@@ -234,7 +226,8 @@ function setup_rust_tooling() {
      # Install bindgen installation
      if [ "${INSTALL_BINDGEN}" = "yes" ]
      then
-         rustup run --install stable cargo install --locked --force --version "${MINIMUM_BINDGEN_VERSION}" bindgen-cli
+         # shellcheck disable=SC2086 # Deliberate word splitting
+         rustup run --install stable cargo install --locked --force --version ${MINIMUM_BINDGEN_VERSION} bindgen-cli
      fi
 }
 
@@ -250,9 +243,8 @@ function setup_buildroot_config() {
 function setup_linux_config() {
     if [ ! -e "${LINUX_CONFIG}" ]
     then
-        # NOTE: Copy versioned defconfig into a findable location
-        # and generate normal config from it. The delete the injects
-        # config afterwards.
+        # Copy versioned defconfig into a findable location
+        # to generate normal config from it. Delete it afterwards.
         echo "Linux config does not exist. Create it."
         cp "${LINUX_CUSTOM_CONFIG}" "${LINUX_DEFCONFIG_QEMU}"
 
@@ -336,7 +328,6 @@ export -f abort_if_linux_not_cloned
 export -f create_random_password_if_not_existing
 export -f abort_if_buildroot_was_not_built
 export -f abort_if_linux_was_not_built
-export -f abort_if_qemu_is_not_running
 export -f stop_qemu_if_running
 export -f setup_rust_tooling
 export -f setup_buildroot_config

@@ -1,4 +1,5 @@
 # TODO: Add target to generate the kernel documentation for rust
+# TODO: Make module building generic
 
 help:
 	echo "This makefile supports the following targets:"
