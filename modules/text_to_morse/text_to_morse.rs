@@ -4,10 +4,10 @@ use kernel::prelude::*;
 
 module! {
     type: TextToMorse,
-    name: "TextToMorse",
+    name: "text_to_morse",
     author: "Simon Brummer <simon.brummer@posteo.de>",
     description: "Module converting text to morse code",
-    license: "GPL",
+    license: "Dual MPL/GPL",
 }
 
 struct TextToMorse {
@@ -16,13 +16,13 @@ struct TextToMorse {
 
 impl kernel::Module for TextToMorse {
     fn init(_module: &'static ThisModule) -> Result<Self> {
-        pr_info!("TextToMorse init\n");
+        pr_info!("text_to_morse init\n");
         Ok(TextToMorse {})
     }
 }
 
 impl Drop for TextToMorse {
     fn drop(&mut self) {
-        pr_info!("TextToMorse exit\n");
+        pr_info!("text_to_morse exit\n");
     }
 }

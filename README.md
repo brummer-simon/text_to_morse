@@ -92,6 +92,7 @@ was changed in the following way:
 1) Use text_to_morse as template:
     ```
     cp -r modules/text_to_morse modules/<module_name>
+    mv modules/<module_name>/text_to_morse.rs modules/<module_name>/<module_name>.rs
     ```
 
 2) Set new module temporarily for module related targets (e.g. build_module):
@@ -100,7 +101,7 @@ was changed in the following way:
     ```
 
 3) Set new module as selected default module: Rewrite variable "MODULE_NAME" in Makefile.
-4) Start development by editing 'modules/<module_name>/module.rs'
+4) [Start development](#Kernel module development workflow)
 
 
 ## Special thanks
