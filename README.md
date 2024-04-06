@@ -1,18 +1,19 @@
 # text_to_morse
 
-An example linux kernel module written in Rust! The kernel module adds a character device
-converting text to morse code.
+An example linux kernel module written in Rust, converting text to morse code.
 
-This repository contains all resources used in my talk held at the RustFest 2024. It provides a pre-configured virtual
-development environment supporting the loading of rust kernel modules. It is designed to provide means to build, integrate and
-test __your own kernel modules__ easily. If you are interested in the talk surrounding the repo, see (TODO add link here after publishing)
+This repository contains all resources used in my talk held at the RustFest 2024.
+It contains a pre-configured virtual development environment supporting loading of rust kernel modules and
+means to build, integrate and test __your own kernel modules__ easily.
 
-The contents of this repo are educational resources, so feel free to use and distribute it.
+The contents of this repository are educational resources, so feel free to use and distribute it.
+
+TODO(mention task/link after publishing)
 
 ## Development environment
 
 In general, the best way to run kernel modules under development is a virtual environment. It
-prevents "biting the hand that feeds you" problems, often encountered low level development.
+prevents "biting the hand that feeds you" problems, often encountered during low level development.
 
 This setup uses [buildroot](http://www.buildroot.org) to build a tiny userland and [qemu](http://www.qemu.org), a hardware emulator.
 The linux kernel itself is configured and built directly from source.
@@ -23,7 +24,7 @@ most existing system architectures, the result is a flexible test environment ab
 In this case: We emulate plain old x86_64. After building and starting the environment via qemu, it is accessible via SSH.
 Out-of-tree build artifacts like kernel modules are deployed via SCP.
 
-To ensure a convenient user experience, of all of those steps are scripted away using make.
+In order to provide a convenient user experience of all of those steps are scripted away and executable via make.
 
 ### Initial build instructions
 
@@ -82,8 +83,7 @@ was changed in the following way:
 
 - Use pre-built external toolchain to speedup buildroot builds.
 - Remove linux from buildroot. It is built directly from source.
-- Add ssh
-- Add custom sshd configuration
+- Add sshd + custom sshd configuration. It provides access from the host system.
 - Add vim
 - Add zsh
 
@@ -101,7 +101,7 @@ was changed in the following way:
     ```
 
 3) Set new module as selected default module: Rewrite variable "MODULE_NAME" in Makefile.
-4) [Start development](#Kernel module development workflow)
+4) [Start development](#Kernel-module-development-workflow)
 
 
 ## Special thanks
@@ -111,4 +111,4 @@ spent on developing and maintaining countless open sources projects.
 I am standing here on the shoulders of giants and I want to thank all of you
 for your work and dedication.
 
-If you have suggestions or want open a bug, please open an issue.
+If you have suggestions or want open a bug, please open an issue and/or feel free to contact me.
