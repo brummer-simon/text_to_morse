@@ -8,4 +8,5 @@ modules:
 clean:
 	make -C $(LINUX_BUILD_DIR) M=$(MOD_BUILD_DIR) src=$$PWD clean
 
-# TODO: Add Rust Analyizer target?
+rustfmt:
+	make -C $(LINUX_BUILD_DIR) src=$$PWD rustfmt

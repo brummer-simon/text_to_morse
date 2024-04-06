@@ -2,8 +2,4 @@
 build/
 
 # Rust
-debug/
-target/
-Cargo.lock
-**/*.rs.bk
-*.pdb
+rust-project.json

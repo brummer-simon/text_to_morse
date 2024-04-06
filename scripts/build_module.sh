@@ -4,6 +4,8 @@ set -o errexit -o pipefail -o nounset
 source "scripts/common.sh"
 preamble
 abort_if_linux_was_not_built
+setup_rust_tooling
+setup_linux_config
 
 # Sanity checks
 if [ "${1:-"NO_PARAM"}" = "NO_PARAM" ]
@@ -33,5 +35,7 @@ readonly SEC="${SECONDS}"
 readonly DURATION="$((SEC / 3600))h $((SEC % 3600 / 60))m $((SEC % 60))s"
 echo "Built module '${MOD_NAME}' successfully. Build took ${DURATION}"
 
+# TODO: Make this work?
+# shellcheck disable=SC2086 # Deliberate word splitting
+make ${MODULE_MAKE_OPTS} MOD_NAME="${MOD_NAME}" MOD_BUILD_DIR="${MOD_BUILD_DIR}" -C "${MOD_SRC_DIR}" rustfmt
 # TODO: Deploy module into virtual env
-# TODO: FIXUP: Generate Rust Analyzer Tooling

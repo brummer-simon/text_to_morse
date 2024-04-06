@@ -43,8 +43,11 @@ In order to provide a convenient user experience of all of those steps are scrip
    make login
    ```
 
-On success, you are greeted by the `kernel_hacking_environment#` message. To leave
-the environment type `exit`.
+On success, you are greeted by the message:
+```
+kernel_hacking_environment#
+```
+To leave the environment enter `exit`.
 
 ### Kernel module development workflow
 
@@ -58,6 +61,7 @@ TODO Describe workflow instructions
 - `make build_linux`         - Start dedicated linux kernel build. Run after reconfiguration
 - `make login`               - Log into virtual environment
 - `make login_kernel_log`    - Log into virtual environment and follow kernel log
+- `make open_rustdoc`        - Open generated rustdoc of linux kernel in browser
 
 TODO: Add more target later on.
 
@@ -75,6 +79,7 @@ Mandatory:
 
 Optional:
 - shellcheck. Uses to sanity check all contained shell scripts
+- xdg-utils. Used to find the default web browser to open rustdoc
 
 ### Buildroot configuration adjustments
 

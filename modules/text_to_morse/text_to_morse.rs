@@ -1,5 +1,4 @@
 /// TODO: Implement me
-/// TODO: Change License to MPL
 use kernel::prelude::*;
 
 module! {
@@ -11,7 +10,6 @@ module! {
 }
 
 struct TextToMorse {
-
 }
 
 impl kernel::Module for TextToMorse {

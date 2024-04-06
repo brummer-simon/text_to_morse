@@ -24,5 +24,7 @@ fi
 
 echo "Cleaning development environment..."
 rm -rf "${BUILD_DIR}"
+rm -rf "${BASE_DIR}/rust-project.json"
 
 echo "Development environment cleaned."
+
