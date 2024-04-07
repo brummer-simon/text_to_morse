@@ -33,5 +33,4 @@ echo "Clean module '${MOD_NAME}'..."
 # shellcheck disable=SC2086 # Deliberate word splitting
 make ${MODULE_MAKE_OPTS} MOD_NAME="${MOD_NAME}" MOD_BUILD_DIR="${MOD_BUILD_DIR}" -C "${MOD_SRC_DIR}" clean
 rm -r "${MOD_BUILD_DIR}"
-
 echo "Module '${MOD_NAME}' cleaned."

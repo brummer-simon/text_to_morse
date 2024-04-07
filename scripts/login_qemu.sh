@@ -9,7 +9,8 @@ then
     echo "Development environment is not running. Start it."
     make -s -C "${BASE_DIR}" start_env
     echo "Wait a moment before attempting login..."
-    sleep 5
+    sleep "${BOOT_DURATION}"
+
 fi
 
 # Note: Drop return code. Although the login works it returns an non

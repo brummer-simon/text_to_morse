@@ -1,5 +1,3 @@
-# TODO: Add target to generate the kernel documentation for rust
-
 # Currently selected kernel module to build
 MODULE_NAME ?= "text_to_morse"
 
@@ -11,25 +9,29 @@ help:
 	echo "    - configure_linux     - Configure linux kernel"
 	echo
 	echo "Build targets:"
-	echo "    - build_env           - Build entire kernel development environment"
-	echo "    - build_buildroot     - Build buildroot environment"
-	echo "    - build_linux         - Build linux kernel"
-	echo "    - build_module        - Build out-of-tree kernel module"
+	echo "    - build_env               - Build entire kernel development environment"
+	echo "    - build_buildroot         - Build buildroot environment"
+	echo "    - build_linux             - Build linux with rustdoc and rust-project.json"
+	echo "    - build_linux_kernel      - Build linux kernel only"
+	echo "    - build_linux_rustdoc     - Build rustdoc from linux kernel"
+	echo "    - build_linux_rustproject - Build rust-project.json from linux kernel"
+	echo "    - build_module            - Build out-of-tree kernel module"
 	echo
 	echo "Cleanup targets:"
-	echo "    - clean_env           - Delete virtual environment"
-	echo "    - clean_buildroot     - Delete buildroot build artifacts"
-	echo "    - clean_linux         - Delete linux kernel build artifacts"
-	echo "    - clean_module        - Delete out-of-tree kernel module build artifacts"
-	echo
-	echo "Environment targets:"
-	echo "    - start_env           - Start linux environment"
-	echo "    - stop_env            - Shutdown linux environment"
-	echo "    - login               - Login into linux environment"
-	echo "    - login_kernel_log    - Login into linux environment and follow kernel log"
+	echo "    - clean_env       - Delete virtual environment"
+	echo "    - clean_buildroot - Delete buildroot build artifacts"
+	echo "    - clean_linux     - Delete linux kernel build artifacts"
+	echo "    - clean_module    - Delete out-of-tree kernel module build artifacts"
 	echo
 	echo "Development targets:"
-	echo "    - shellcheck          - Check bash scripts under scripts"
+	echo "    - load_module      - Deploy kernel module into linux environment and load it"
+	echo "    - unload_module    - Unload kernel module"
+	echo "    - start_env        - Start linux environment"
+	echo "    - stop_env         - Shutdown linux environment"
+	echo "    - login            - Login into linux environment"
+	echo "    - login_kernel_log - Login into linux environment and follow kernel log"
+	echo "    - open_rustdoc     - Open rustdoc for linux kernel facilities."
+	echo "    - shellcheck       - Check bash scripts under scripts"
 
 # Configuration targets
 configure_buildroot:
@@ -48,6 +50,15 @@ build_buildroot:
 build_linux:
 	./scripts/build_linux.sh
 
+build_linux_kernel:
+	./scripts/build_linux.sh "ONLY_LINUX"
+
+build_linux_rustdoc:
+	./scripts/build_linux.sh "ONLY_LINUX_RUSTDOC"
+
+build_linux_rustproject:
+	./scripts/build_linux.sh "ONLY_LINUX_RUSTPROJECT"
+
 build_module:
 	./scripts/build_module.sh $(MODULE_NAME)
 
@@ -64,7 +75,13 @@ clean_linux:
 clean_module:
 	./scripts/clean_module.sh $(MODULE_NAME)
 
-# Environment targets
+# Development targets
+load_module:
+	./scripts/load_module.sh $(MODULE_NAME)
+
+unload_module:
+	./scripts/unload_module.sh $(MODULE_NAME)
+
 start_env:
 	./scripts/start_qemu.sh
 
@@ -77,7 +94,9 @@ login:
 login_kernel_log:
 	./scripts/login_qemu_kernel_log.sh
 
-# Development targets
+open_rustdoc:
+	./scripts/open_rustdoc.sh
+
 shellcheck:
 	shellcheck -a -s bash scripts/*
 
@@ -87,14 +106,20 @@ shellcheck:
 	configure_linux\
 	build_buildroot\
 	build_linux\
+	build_linux_kernel\
+	build_linux_rustdoc\
+	build_linux_rustproject\
 	build_module\
 	build_env\
 	clean_env\
 	clean_module\
+	load_module\
+	unload_module\
 	start_env\
 	stop_env\
 	login\
 	login_kernel_log\
+	open_rustdoc\
 	shellcheck
 
 .SILENT:\
@@ -103,12 +128,18 @@ shellcheck:
 	configure_linux\
 	build_buildroot\
 	build_linux\
+	build_linux_kernel\
+	build_linux_rustdoc\
+	build_linux_rustproject\
 	build_module\
 	build_env\
 	clean_env\
 	clean_module\
+	load_module\
+	unload_module\
 	start_env\
 	stop_env\
 	login\
 	login_kernel_log\
+	open_rustdoc\
 	shellcheck

@@ -1,5 +1,4 @@
 /// TODO: Implement me
-/// TODO: Change License to MPL
 use kernel::prelude::*;
 
 module! {
@@ -10,19 +9,17 @@ module! {
     license: "Dual MPL/GPL",
 }
 
-struct TextToMorse {
-
-}
+struct TextToMorse {}
 
 impl kernel::Module for TextToMorse {
     fn init(_module: &'static ThisModule) -> Result<Self> {
-        pr_info!("text_to_morse init\n");
+        pr_info!("Loading module: text_to_morse\n");
         Ok(TextToMorse {})
     }
 }
 
 impl Drop for TextToMorse {
     fn drop(&mut self) {
-        pr_info!("text_to_morse exit\n");
+        pr_info!("Unloading module: text_to_morse\n");
     }
 }
