@@ -34,9 +34,9 @@ In order to provide a convenient user experience of all of those steps are scrip
    git clone --recursive git@github.com:brummer-simon/text_to_morse.git
    cd text_to_morse
    ```
-3) Build the development environment (full build takes ~45m):
+3) Build the entire development environment (full build takes ~45m):
    ```
-   make build_env login
+   make build_env build_module login
    ```
 
 On success, you are greeted by the message:
@@ -47,7 +47,18 @@ To leave the environment enter `exit`.
 
 ### Kernel module development workflow
 
-TODO Describe workflow instructions
+1) Select the kernel module you work on, by setting 'MODULE_NAME' in the main Makefile
+   or specify it as parameter to all module related make calls. By default, the "text_to_morse"
+   example module is selected.
+2) Edit the modules code with the editor of your choice.
+3) Build your module via `make build_module`.
+4) Kernel modules are heavily relaying on the kernels logging facilities. Open a new terminal
+   and enter `make login_kernel_log` to follow the kernel log.
+5) Deploy your module via `make load_module`. On success, the kernel log is now containing
+   a message that the deployed model was loaded.
+6) Open a new terminal, enter `make login` to login to the development environment and
+   interact with the loaded module.
+
 
 ### Useful make targets
 
@@ -58,8 +69,6 @@ TODO Describe workflow instructions
 - `make login`               - Log into virtual environment
 - `make login_kernel_log`    - Log into virtual environment and follow kernel log
 - `make open_rustdoc`        - Open generated rustdoc of linux kernel in browser
-
-TODO: Add more target later on.
 
 ### Dependencies
 
