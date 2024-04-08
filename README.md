@@ -75,8 +75,8 @@ To leave the environment enter `exit`.
 Mandatory:
 - Buildroot dependencies. See [buildroot documentation](https://buildroot.org/downloads/manual/manual.html#requirement-mandatory).
 - Linux dependencies. See See [Linux documentation](https://www.kernel.org/doc/html/latest/process/changes.html).
-- clang (The Rust <-> C language binding generator uses LLVM under the hood.)
-- rustup
+- llvm (The Rust <-> C language binding generator uses LLVM under the hood.)
+- clang
 - ssh
 - sshpass
 - awk

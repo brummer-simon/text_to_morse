@@ -196,7 +196,13 @@ function setup_rust_tooling() {
 
     if [ "${INSTALL_RUST}" = "yes" ]
     then
-        mkdir -p "${RUSTUP_BIN_DIR}"
+        mkdir -p "${CARGO_BIN_DIR}"
+
+        # Install rustup if not already available
+        if [ ! -x "${CARGO_BIN_DIR}/rustup" ]
+        then
+            wget -q -O - https://sh.rustup.rs | sh -s -- -y --no-modify-path --default-toolchain none
+        fi
 
         # Build required rust version and link tooling it to host bin location
         # shellcheck disable=SC2086 # Deliberate word splitting
@@ -208,6 +214,7 @@ function setup_rust_tooling() {
         local TOOLCHAIN_BIN_DIR
         TOOLCHAIN_BIN_DIR="$(dirname "$(rustup which rustc)")"
 
+        mkdir -p "${RUSTUP_BIN_DIR}"
         for BINARY in "${TOOLCHAIN_BIN_DIR}"/*
         do
             ln -sf "${BINARY}" "${RUSTUP_BIN_DIR}"
