@@ -31,7 +31,10 @@ In order to provide a convenient user experience of all of those steps are scrip
 1) Install all mandatory dependencies with your packet manager. See [Dependencies](#Dependencies).
 2) Clone this repository (including submodules) and enter it:
    ```
-   git clone --depth 1 https://github.com/brummer-simon/text_to_morse.git; cd text_to_morse; git submodule init; git submodule update --depth 1
+   git clone --depth 1 https://github.com/brummer-simon/text_to_morse.git
+   cd text_to_morse
+   git submodule init
+   git submodule update --depth 1
    ```
 3) Build the entire development environment (full build takes ~45m):
    ```
