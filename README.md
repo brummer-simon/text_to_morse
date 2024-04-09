@@ -31,8 +31,7 @@ In order to provide a convenient user experience of all of those steps are scrip
 1) Install all mandatory dependencies with your packet manager. See [Dependencies](#Dependencies).
 2) Clone this repository (including submodules) and enter it:
    ```
-   git clone --recursive https://github.com/brummer-simon/text_to_morse.git
-   cd text_to_morse
+   git clone --depth 1 https://github.com/brummer-simon/text_to_morse.git; cd text_to_morse; git submodule init; git submodule update --depth 1
    ```
 3) Build the entire development environment (full build takes ~45m):
    ```
@@ -113,6 +112,14 @@ was changed in the following way:
 3) Set new module as selected default module: Rewrite variable "MODULE_NAME" in Makefile.
 4) [Start development](#Kernel-module-development-workflow)
 
+## Other projects
+
+This is not the only project providing a kernel development environment. Depending on your
+needs / linux flavor in use, others might work better for you. Here is a list of 
+other interesting projects:
+
+- For Nix Users: [kernel-dev](https://github.com/blitz/kernel-dev)
+
 
 ## Special thanks
 
@@ -120,5 +127,8 @@ This project would not be possible without possibly millions of hours
 spent on developing and maintaining countless open sources projects.
 I am standing here on the shoulders of giants and I want to thank all of you
 for your work and dedication.
+
+Special thanks go out to everyone trying out my setup and providing feedback
+during its development phase. Thanks for your suggestions and valuable time.
 
 If you have suggestions or want open a bug, please open an issue and/or feel free to contact me.
