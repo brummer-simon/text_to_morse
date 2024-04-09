@@ -1,6 +1,6 @@
 [submodule "env/buildroot"]
 	path = env/buildroot
-	url = https://github.com:buildroot/buildroot.git
+	url = https://github.com/buildroot/buildroot.git
 [submodule "env/linux"]
 	path = env/linux
 	url = https://github.com/torvalds/linux.git
