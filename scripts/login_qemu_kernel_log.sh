@@ -13,4 +13,4 @@ then
 fi
 
 # shellcheck disable=SC2086 # Deliberate word splitting
-sshpass -f "${SSH_PASSWORD_FILE}" ssh ${SSH_OPTS} "zsh -c 'tail -f /var/log/messages'" || true
+TERM=linux sshpass -f "${SSH_PASSWORD_FILE}" ssh ${SSH_OPTS} "zsh -c 'tail -f /var/log/messages'" || true

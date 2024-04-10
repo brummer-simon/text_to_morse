@@ -16,4 +16,4 @@ fi
 # Note: Drop return code. Although the login works it returns an non
 # zero return code on exit causing the script to fail. || true prevents it.
 # shellcheck disable=SC2086 # Deliberate word splitting
-sshpass -f "${SSH_PASSWORD_FILE}" ssh ${SSH_OPTS} || true
+TERM=linux sshpass -f "${SSH_PASSWORD_FILE}" ssh ${SSH_OPTS} || true
