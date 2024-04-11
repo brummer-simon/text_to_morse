@@ -12,7 +12,7 @@ module! {
 struct TextToMorse {}
 
 impl kernel::Module for TextToMorse {
-    fn init(_module: &'static ThisModule) -> Result<Self> {
+    fn init(_name: &'static CStr, _module: &'static ThisModule) -> Result<Self> {
         pr_info!("Loading module: text_to_morse\n");
         Ok(TextToMorse {})
     }
