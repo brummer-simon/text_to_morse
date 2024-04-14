@@ -113,7 +113,15 @@ was changed in the following way:
     ```
 
 3) Set new module as selected default module: Rewrite variable "MODULE_NAME" in Makefile.
-4) [Start development](#Kernel-module-development-workflow)
+4) Optional: Device creation. If your module registers character, the nodes under /dev
+   are created via udev. Keep the DEVICES Parameter in the kernel module, add a udev rule for your
+   module in "/env/buildroot_overlay/etc/udev/rules.d/90-custom.rules" and rebuild the root filesystem by calling:
+   ```
+   make build_buildroot
+   ```
+   Afterwards devices under /dev/<module name> should exists.
+
+5) [Start development](#Kernel-module-development-workflow)
 
 ## Other projects
 

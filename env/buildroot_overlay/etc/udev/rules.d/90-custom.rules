@@ -1,0 +1,2 @@
+ACTION=="add",    KERNEL=="text_to_morse", RUN+="/bin/handle_nodes.sh -a %k"
+ACTION=="remove", KERNEL=="text_to_morse", RUN+="/bin/handle_nodes.sh -r %k"
