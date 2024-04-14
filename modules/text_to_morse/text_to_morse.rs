@@ -1,10 +1,15 @@
-// TODO: Set kernel loglevel
+// Note: Set kernel loglevel to debug: echo "7" > /sys/kernel/printk
+
+// TODO: Todo port to miscdev
+
 // TODO: Implement file operations
 // TODO: Pass blink frequency as kernel parameter
 // TODO: Figure timer stuff out
+use kernel::prelude::*;
 use kernel::chrdev;
 use kernel::file;
-use kernel::prelude::*;
+use kernel::io_buffer::{IoBufferReader, IoBufferWriter};
+use kernel::sync::{Arc, ArcBorrow, Mutex};
 
 // Constants
 const MAX_DEVICES: usize = 8;
@@ -48,6 +53,9 @@ impl kernel::Module for Module {
         let mut registry = chrdev::Registration::new_pinned(name, 0, module)?;
         for number in 0..devices {
             pr_info!("Registering device number {}\n", number);
+
+            let device = Device::new();
+            // NOTE: How to pass open data into device registration
             registry.as_mut().register::<Device>()?;
         }
 
@@ -65,16 +73,58 @@ impl Drop for Module {
 
 /// Character device implementation.
 struct Device {
-    // TODO: Add data buffer and all that stuff
+    // Access management flags
+    has_readers: bool,
+    has_writers: bool,
+}
+
+impl Device {
+    fn new() -> Arc<Mutex<Device>> {
+        let device = Device{
+            has_readers: false,
+            has_writers: false,
+        };
+        Arc::new(Mutex::new(device))
+    }
 }
 
 #[vtable]
 impl file::Operations for Device {
-    fn open(_shared: &(), _file: &file::File) -> Result {
+    type Data = Arc<Mutex<Device>>;
+
+    fn open(open_data: &(), _file: &file::File) -> Result<Arc<Mutex<Device>>> {
+        // Open: Implement Device opening behavior. In this case it means:
+        // - Exclusive read access: At most one reader is allow at all times.
+        // - Exclusive write access: At most one writer is allow at all times.
         pr_debug!("Called open(...)\n");
-        // TODO: Check if already opened by other users!
-        Ok(())
+        // TODO: Check Opening mode.
+
+        // TODO: Check if already opened by other users. Return Error is this is the case
+        //Ok(open_data.clone())
     }
 
-    // Implement: release, read, write, maybe an async read????
+    fn release(_data: Arc<Mutex<Device>>, _file: &file::File) {
+        pr_debug!("Called release(...)\n");
+        // TODO: Handle cleaup
+    }
+
+    fn write(
+        _state: ArcBorrow<'_, Mutex<Device>>,
+        _file: &file::File,
+        _data: &mut impl IoBufferReader,
+        _offset: u64,
+    ) -> Result<usize> {
+        pr_debug!("Called write(...)\n");
+        Err(EOPNOTSUPP)
+    }
+
+    fn read(
+        _state: ArcBorrow<'_, Mutex<Device>>,
+        _file: &file::File,
+        _data: &mut impl IoBufferWriter,
+        _offset: u64,
+    ) -> Result<usize> {
+        pr_debug!("Called read(...)\n");
+        Err(EOPNOTSUPP)
+    }
 }
