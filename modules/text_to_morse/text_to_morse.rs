@@ -1,9 +1,16 @@
-// NOTE: How to set kernel loglevel to debug? echo "7" > /sys/kernel/printk
+// TODO: Implement find a way to enter broken character via buildroot
+// TODO: Rewrite documentation
+// TODO: Expose cdev from submodule
+// TODO: Fix all warnings
 
-// TODO: Implement file operations
-// TODO: Pass blink frequency as kernel parameter
-// TODO: Figure timer stuff out
-// TODO: Document important stuff
+// Module internal
+mod ringbuffer;
+use ringbuffer::Ringbuffer;
+
+mod morse;
+use morse::morse_code_from;
+
+// Module external
 use alloc::{string::String, vec::Vec};
 use kernel::chrdev;
 use kernel::file::{
@@ -17,7 +24,7 @@ use kernel::{prelude::*, ForeignOwnable};
 // Constants
 const MINOR_IDS_BEGIN: u16 = 0;
 const MAX_DEVICES: usize = 1;
-const BUFFER_SIZE: usize = 1024;
+const BUFFER_SIZE: usize = 10;
 
 // Kernel module registration.
 module! {
@@ -77,19 +84,16 @@ impl Drop for Module {
 struct DeviceState {
     has_readers: bool,
     has_writers: bool,
-    buffer: String,
+    queue: Ringbuffer<u8, BUFFER_SIZE>,
 }
 
 impl DeviceState {
-    fn try_new() -> Result<Mutex<Self>> {
-        let mut buffer = String::new();
-        buffer.try_reserve_exact(BUFFER_SIZE)?;
-
-        Ok(Mutex::new(Self {
+    fn new() -> Mutex<Self> {
+        Mutex::new(Self {
             has_readers: false,
             has_writers: false,
-            buffer: buffer,
-        }))
+            queue: Ringbuffer::new(),
+        })
     }
 }
 
@@ -100,7 +104,7 @@ struct Device {
 
 impl Device {
     fn try_new(id: usize) -> Result<Arc<Self>> {
-        let state = DeviceState::try_new()?;
+        let state = DeviceState::new();
         let device = Device { id, state };
         Arc::try_new(device)
     }
@@ -111,7 +115,6 @@ impl Device {
         static DEVICES_POOL: Mutex<Vec<Arc<Device>>> = Mutex::new(Vec::new());
 
         let mut device_pool = DEVICES_POOL.lock();
-
         let device = device_pool.iter().find(|device| device.id == id);
 
         match device {
@@ -133,7 +136,7 @@ impl file::Operations for Device {
         // Open: Implements "backend" syscall open. We enforce the following semantics:
         // - Exclusive read access: At most one reader is allowed at all times.
         // - Exclusive write access: At most one writer is allowed at all times.
-        pr_debug!("Called open(...)\n");
+        pr_info!("Called open(...)\n");
 
         // TODO: Determine minor_id from file and use it as device id. No obvious way to do it.
         let minor_id = 0;
@@ -151,7 +154,7 @@ impl file::Operations for Device {
                     );
                     return Err(EACCES);
                 } else {
-                    pr_debug!("Mark Device {} as read accessed.\n", device.id);
+                    pr_info!("Mark Device {} as read accessed.\n", device.id);
                     state.has_readers = true;
                 }
             }
@@ -165,7 +168,7 @@ impl file::Operations for Device {
                     );
                     return Err(EACCES);
                 } else {
-                    pr_debug!("Mark Device {} as write accessed.\n", device.id);
+                    pr_info!("Mark Device {} as write accessed.\n", device.id);
                     state.has_writers = true;
                 }
             }
@@ -179,7 +182,7 @@ impl file::Operations for Device {
                     );
                     return Err(EACCES);
                 } else {
-                    pr_debug!("Mark Device {} as read/write accessed.\n", device.id);
+                    pr_info!("Mark Device {} as read/write accessed.\n", device.id);
                     state.has_readers = true;
                     state.has_writers = true;
                 }
@@ -193,22 +196,22 @@ impl file::Operations for Device {
     }
 
     fn release(device: Self::Data, file: &file::File) {
-        // Release: Implements "backend" of syscall close. Return mutual access
+        // Release: Implements "backend" of syscall release. Return mutual access
         // acquired in open call.
-        pr_debug!("Called release(...)\n");
+        pr_info!("Called release(...)\n");
 
         // Free usage based access mode
         match file.flags() & O_ACCMODE {
             O_RDONLY => {
-                pr_debug!("Mark Device {} as not read accessed.\n", device.id);
+                pr_info!("Mark Device {} as not read accessed.\n", device.id);
                 device.state.lock().has_readers = false;
             }
             O_WRONLY => {
-                pr_debug!("Mark Device {} as not write accessed.\n", device.id);
+                pr_info!("Mark Device {} as not write accessed.\n", device.id);
                 device.state.lock().has_writers = false;
             }
             O_RDWR => {
-                pr_debug!("Mark Device {} as not read/write accessed.\n", device.id);
+                pr_info!("Mark Device {} as not read/write accessed.\n", device.id);
                 let mut state = device.state.lock();
                 state.has_readers = true;
                 state.has_writers = true;
@@ -219,6 +222,7 @@ impl file::Operations for Device {
         };
     }
 
+    // TODO: Figure out meaning of offset parameter
     fn write(
         device: <Self::Data as ForeignOwnable>::Borrowed<'_>,
         _file: &file::File,
@@ -226,50 +230,91 @@ impl file::Operations for Device {
         _offset: u64,
     ) -> Result<usize> {
         // Write: Implements "backend" of syscall write.
-        pr_debug!("Called write(...)\n");
+        pr_info!("Called write(...)\n");
 
         // Determine available space in our buffer. If no space is available,
-        // return EAGAIN to indicate that a later attempt might succeed
+        // return EAGAIN to indicate that a later attempt might succeed.
         let mut state = device.state.lock();
-        let available_bytes = BUFFER_SIZE - state.buffer.len();
-
-        if available_bytes == 0 {
-            return Err(EAGAIN)
+        if state.queue.is_full() {
+            pr_info!("Write failed. Queue is already exhausted.\n");
+            return Err(EAGAIN);
         }
 
+        // Parse buffer char by char, verify utf-8 encoding and append all chars to our queue
+        // until everything is read, our queue is exhausted to something has gone
+        // wrong.
+        let mut total_bytes_read = 0usize;
+        while !state.queue.is_full() {
+            let result = try_read_char(buffer).and_then(|char| {
+                let read_bytes = char.len_utf8();
+                let morse_code = morse_code_from(char);
+                pr_info!("Storing char '{}' as '{}'\n", char, morse_code);
 
-        // Parse buffer char by char, verify utf-8 encoding and append each character
-        // in our buffer until it is unable to store anymore data.
+                let morse_code = morse_code.as_bytes();
+                if morse_code.len() <= state.queue.free() {
+                    morse_code
+                        .iter()
+                        .try_for_each(|byte| state.queue.try_push(*byte))?;
 
-        let mut bytes = Vec::new();
-        let read_bytes = try_read_codepoint(buffer, &mut bytes)?;
-        let char = String::from_utf8(bytes)?;
-        state.buffer.try_push(char)?;
+                    total_bytes_read += read_bytes;
+                    Ok(())
+                } else {
+                    pr_info!("Failed to store morse code. Queue is out of memory\n");
+                    Err(ENOMEM)
+                }
+            });
 
-        // TODO: Update read and available bytes
-        Err(EOPNOTSUPP)
+            // Examine errors
+            if let Err(errno) = result {
+                if total_bytes_read > 0 {
+                    break;
+                }
+                if let Some(error_name) = errno.name() {
+                    pr_err!("Failed to read bytes. Error was {}\n", error_name);
+                } else {
+                    pr_err!("Failed to read bytes due to unknown error.\n");
+                }
+                return Err(errno);
+            }
+        }
+        pr_info!("Read {} bytes in total.\n", total_bytes_read);
+        Ok(total_bytes_read)
     }
 
+    // TODO: Figure out meaning of offset parameter
     fn read(
-        _device: <Self::Data as ForeignOwnable>::Borrowed<'_>,
+        device: <Self::Data as ForeignOwnable>::Borrowed<'_>,
         _file: &file::File,
-        _buffer: &mut impl IoBufferWriter,
+        buffer: &mut impl IoBufferWriter,
         _offset: u64,
     ) -> Result<usize> {
-        // TODO: Implement write without translation
-        pr_debug!("Called read(...)\n");
-        Err(EOPNOTSUPP)
+        pr_info!("Called read(...)\n");
+
+        let mut state = device.state.lock();
+        if state.queue.is_empty() {
+            pr_info!("Nothing to read. Queue is empty\n");
+            return Ok(0);
+        }
+
+        // Transfer bytes from queue to buffer until either the buffer or the queue is empty.
+        let mut total_bytes_written = 0usize;
+        while !buffer.is_empty() {
+            match state.queue.try_pop().and_then(|byte| buffer.write(&byte)) {
+                Ok(_) => total_bytes_written += 1,
+                Err(_) => break,
+            }
+        }
+
+        pr_info!("Written {} bytes in total.\n", total_bytes_written);
+        Ok(total_bytes_written)
     }
 }
 
-fn try_read_codepoint(buffer: &mut impl IoBufferReader, bytes: &mut Vec<u8>) -> Result<usize> {
-    // Assumption: The buffer contains a UTF-8 encoded string. With UTF-8 being a variable
-    // length encoding, the buffer could hold parts of a character. Therefore we can't just
-    // read the entire buffer into a string (verifies encoding on construction).
-    // Instead this function performs some bit fiddling to determine the number of bytes
-    // of the next character and stores these bytes into the given vector.
-    // If something unexpected is encountered, return an Error.
-
+// TODO: Document error semantics
+// - Encoding fails: EILSEQ
+// - Internal memory exhaused -> ENOMEM
+// - Buffer Read Fails: EINVAL
+fn try_read_char(buffer: &mut impl IoBufferReader) -> Result<char> {
     // Bitfiddling constants
     const MASK_1BYTE: u8 = 0b10000000;
     const BITS_1BYTE: u8 = 0b00000000;
@@ -279,45 +324,33 @@ fn try_read_codepoint(buffer: &mut impl IoBufferReader, bytes: &mut Vec<u8>) -> 
     const BITS_3BYTE: u8 = 0b11100000;
     const MASK_4BYTE: u8 = 0b11111000;
     const BITS_4BYTE: u8 = 0b11110000;
-    const MASK_NEXT_BYTE: u8 = 0b11000000;
-    const BITS_NEXT_BYTE: u8 = 0b10000000;
 
     // Read first byte to determine the number of bytes of this character.
-    let byte: u8 = buffer.read()?;
-    let remaining_bytes = {
-        if (byte & MASK_1BYTE) == BITS_1BYTE {
-            Ok(0)
-        }
-        else if (byte & MASK_2BYTE) == BITS_2BYTE {
-            Ok(1)
-        }
-        else if (byte & MASK_3BYTE) == BITS_3BYTE {
-            Ok(2)
-        }
-        else if (byte & MASK_4BYTE) == BITS_4BYTE {
-            Ok(3)
-        }
-        else {
-            // Buffer contents are not a utf-8 encoded string.
-            // Return EILSEQ (Illegal byte sequence)
-            Err(EILSEQ)
-        }
+    let byte: u8 = buffer.read().map_err(|_| EINVAL)?;
+    let remaining_bytes = if (byte & MASK_1BYTE) == BITS_1BYTE {
+        Ok(0)
+    } else if (byte & MASK_2BYTE) == BITS_2BYTE {
+        Ok(1)
+    } else if (byte & MASK_3BYTE) == BITS_3BYTE {
+        Ok(2)
+    } else if (byte & MASK_4BYTE) == BITS_4BYTE {
+        Ok(3)
+    } else {
+        // Buffer contents are not a utf-8 encoded string.
+        // Return EILSEQ (Illegal byte sequence)
+        Err(EILSEQ)
     }?;
 
-    // Read additional bytes and verify them
-    bytes.clear();
-    bytes.try_push(byte)?;
+    // Read additional bytes, convert them in a String of enforce proper UTF8
+    // validation and return read character.
+    let mut bytes = Vec::new();
+    bytes.try_push(byte).map_err(|_| ENOMEM)?;
 
     for _ in 0..remaining_bytes {
-        let byte: u8 = buffer.read()?;
-
-        if (byte & MASK_NEXT_BYTE) == BITS_NEXT_BYTE {
-            bytes.try_push(byte)?;
-        } else {
-            // Buffer contents are not a utf-8 encoded string.
-            // Return EILSEQ (Illegal byte sequence)
-            return Err(EILSEQ);
-        }
+        let byte: u8 = buffer.read().map_err(|_| EINVAL)?;
+        bytes.try_push(byte).map_err(|_| ENOMEM)?;
     }
-    Ok(bytes.len())
+
+    let string = String::from_utf8(bytes).map_err(|_| EILSEQ)?;
+    string.chars().nth(0).ok_or_else(|| EILSEQ)
 }
