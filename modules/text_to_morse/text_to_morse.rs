@@ -3,9 +3,6 @@
 //! Kernel Module to convert UTF-8 text to morse code.
 //! Author: Simon Brummer <simon.brummer@posteo.de>
 
-// Improvements / TODO:
-// - Expose dev_t (for unique device id) from file structure
-
 mod ringbuffer;
 use ringbuffer::Ringbuffer;
 
@@ -26,7 +23,7 @@ use kernel::{
 };
 
 // Constants and static data
-const MAX_DEVICES: usize = 1;
+const MAX_DEVICES: usize = 16;
 const BUFFER_SIZE: usize = 256;
 
 kernel::init_static_sync! {
@@ -42,7 +39,7 @@ module! {
     license: "Dual MPL/GPL",
     params: {
         DEVICES: usize {
-            default: 1,
+            default: 4,
             permissions: 0o444,
             description: "Number of devices to create.",
         },
@@ -109,7 +106,7 @@ impl DeviceInner {
 
 /// Character device implementing text to morse conversion.
 struct Device {
-    id: usize,                 // Constant Id of the device.
+    id: u16,                   // Constant Id of the device.
     inner: Mutex<DeviceInner>, // Mutable inner device state, protected by a Mutex
 }
 
@@ -122,7 +119,7 @@ impl Device {
     /// # Returns:
     /// On success, an Arc containing a new Device,
     /// on failure an Err containing return code ENOMEM.
-    fn try_new(id: usize) -> Result<Arc<Self>> {
+    fn try_new(id: u16) -> Result<Arc<Self>> {
         let inner = Mutex::new(DeviceInner::new());
         let device = Device { id, inner };
         Arc::try_new(device)
@@ -136,7 +133,7 @@ impl Device {
     /// Returns:
     /// On success, an Arc to the found / newly allocated device,
     /// on failure an Err containing return code ENOMEM.
-    fn get_or_try_allocate_device(id: usize) -> Result<Arc<Device>> {
+    fn get_or_try_allocate_device(id: u16) -> Result<Arc<Device>> {
         static DEVICES_POOL: Mutex<Vec<Arc<Device>>> = Mutex::new(Vec::new());
 
         let mut device_pool = DEVICES_POOL.lock();
@@ -179,19 +176,14 @@ impl file::Operations for Device {
     /// To function properly, this device relies on exclusive access for reading and/or writing.
     fn open(_: &Self::OpenData, file: &file::File) -> Result<Self::Data> {
         // Try to access device associated with file
-        // TODO: Extend file::File wrapper to access dev_t value of the file.
-        let minor_id = 0;
-        let device = match Device::get_or_try_allocate_device(minor_id) {
+        let dev_id = file.minor_id();
+        let device = match Device::get_or_try_allocate_device(dev_id) {
             Ok(device) => {
                 pr_info!("Open device {}\n", device.id);
                 device
             }
             Err(errno) => {
-                pr_err!(
-                    "Failed to open device {}. Error was: {:?}\n",
-                    minor_id,
-                    errno
-                );
+                pr_err!("Failed to open device {}. Error was: {:?}\n", dev_id, errno);
                 return Err(errno);
             }
         };
@@ -247,7 +239,7 @@ impl file::Operations for Device {
             }
         };
 
-        pr_info!("Opened device {} successfully\n", minor_id);
+        pr_info!("Opened device {} successfully\n", device.id);
         Ok(device)
     }
 
