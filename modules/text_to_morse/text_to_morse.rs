@@ -3,8 +3,8 @@
 //! Kernel Module to convert UTF-8 text to morse code.
 //! Author: Simon Brummer <simon.brummer@posteo.de>
 
-// TODO: Test concurrent reading and writing
-// TODO: Expose dev_t (for unique device id) from file structure
+// Improvements / TODO:
+// - Expose dev_t (for unique device id) from file structure
 
 mod ringbuffer;
 use ringbuffer::Ringbuffer;
@@ -21,12 +21,18 @@ use kernel::{
     },
     io_buffer::{IoBufferReader, IoBufferWriter},
     prelude::*,
-    sync::{smutex::Mutex, Arc},
+    sync::{smutex::Mutex, Arc, CondVar},
     ForeignOwnable,
 };
 
+// Constants and static data
 const MAX_DEVICES: usize = 1;
-const BUFFER_SIZE: usize = 10;
+const BUFFER_SIZE: usize = 256;
+
+kernel::init_static_sync! {
+    static READ_CONDITION: CondVar;
+    static WRITE_CONDITION: CondVar;
+}
 
 module! {
     type: Module,
@@ -293,9 +299,8 @@ impl file::Operations for Device {
     /// # Returns:
     /// On success: An Ok containing the number of successfully written bytes, on failure
     /// an Err containing one of the following error codes:
-    /// * EAGAIN: The internal buffer is currently full. A later attempt might be successful.
     /// * EINVAL: Given buffer contains not a single, valid UTF-8 codepoint.
-    /// * EINVAL: Given buffer contains not a single, valid UTF-8 codepoint.
+    /// * EINVAL: Given buffer not enough bytes to contain a codepoint.
     ///
     /// # Notes:
     /// * write is meant from a user space perspective. If a process from user space wants to write
@@ -314,18 +319,30 @@ impl file::Operations for Device {
         pr_info!("Try to write {} into device {}\n", buffer.len(), device.id);
         pr_info!("Write: Offset is {}\n", offset);
 
+        // Wait until there is space to store
         let mut inner = device.inner.lock();
-        if inner.queue.is_full() {
-            pr_info!("Write failed. Queue is already exhausted, try later.\n");
-            return Err(EAGAIN);
+        while inner.queue.is_full() {
+            pr_info!(
+                "Device {} buffer is full. Wait until space is available.\n",
+                device.id
+            );
+
+            if WRITE_CONDITION.wait(&mut inner) {
+                pr_info!("Signal received, nothing was written. Return.\n");
+                return Ok(0);
+            }
         }
+        pr_info!(
+            "Device {} buffer has space. Write as much as possible.\n",
+            device.id
+        );
 
         // Parse buffer char by char. Since a char is a UTF-8 codepoint with variable length
         // encoding, try to extract a char from buffer, verify its encoding and convert
         // it afterwards to the associated morse code representation until one
         // of the following events happen:
         // - The given buffer is drained
-        // - Our internal queue is exhaused.
+        // - The calling process receives a signal.
         // - Or something else has gone wrong.
         let mut total_bytes_read = 0usize;
         while !inner.queue.is_full() {
@@ -334,19 +351,23 @@ impl file::Operations for Device {
                 let morse_code = morse_code_from(char);
                 pr_info!("Try to store given char '{}' as '{}'\n", char, morse_code);
 
+                // Wait until there is enough space available to store morse_code
                 let morse_code = morse_code.as_bytes();
-                if morse_code.len() <= inner.queue.free() {
-                    morse_code
-                        .iter()
-                        .try_for_each(|byte| inner.queue.try_push(*byte))
-                        .unwrap(); // Due to the previous check, it should never fail.
-
-                    total_bytes_read += read_bytes;
-                    Ok(())
-                } else {
-                    pr_info!("Unable to store morse code. Queue is out of memory. Try again later\n");
-                    Err(EAGAIN)
+                while inner.queue.free() <= morse_code.len() {
+                    if WRITE_CONDITION.wait(&mut inner) {
+                        pr_info!("Device {} received signal.\n", device.id);
+                        return Ok(());
+                    }
                 }
+
+                // Store morse_code in buffer.
+                morse_code
+                    .iter()
+                    .try_for_each(|byte| inner.queue.try_push(*byte))
+                    .unwrap(); // Due to the previous check, it should never fail.
+
+                total_bytes_read += read_bytes;
+                Ok(())
             });
 
             if let Err(errno) = result {
@@ -361,11 +382,14 @@ impl file::Operations for Device {
                 return Err(errno);
             }
         }
+
         pr_info!(
-            "Written {} bytes into device {}\n",
+            "Written {} bytes into device {}. Notify all readers.\n",
             total_bytes_read,
             device.id
         );
+
+        READ_CONDITION.notify_all();
         Ok(total_bytes_read)
     }
 
@@ -392,11 +416,21 @@ impl file::Operations for Device {
         pr_info!("Try to read {} from device {}\n", buffer.len(), device.id);
         pr_info!("Read: Offset is {}\n", offset);
 
+        // Wait sleep until read condition is fulfilled. Or a signal was received.
         let mut inner = device.inner.lock();
-        if inner.queue.is_empty() {
-            pr_info!("Nothing to read. Queue is empty\n");
-            return Ok(0);
+
+        while inner.queue.is_empty() {
+            pr_info!(
+                "Device {} is empty. Wait sleep until data is available.\n",
+                device.id
+            );
+
+            if READ_CONDITION.wait(&mut inner) {
+                pr_info!("Signal received, nothing to read. Return\n");
+                return Ok(0);
+            }
         }
+        pr_info!("Device {} has data. Read as much as possible.\n", device.id);
 
         // Transfer bytes from queue to buffer until either the buffer or the queue is empty.
         let mut total_bytes_written = 0usize;
@@ -407,7 +441,12 @@ impl file::Operations for Device {
             }
         }
 
-        pr_info!("Read {} from device {}\n", total_bytes_written, device.id);
+        pr_info!(
+            "Read {} from device {}. Notify writers.\n",
+            total_bytes_written,
+            device.id
+        );
+        WRITE_CONDITION.notify_all();
         Ok(total_bytes_written)
     }
 }
