@@ -1,3 +1,18 @@
+// SPDX-License-Identifier: Dual MPL/GPL
+// Author: Simon Brummer <simon.brummer@posteo.de>
+
+/// Convert a character into its morse code representation
+///
+/// # Arguments
+/// * char: The character (UTF-8) to convert into morse code.
+///
+/// # Returns
+/// A reference to str containing the morse code representation of argument char.
+///
+/// # Note
+/// The values in the lookup table come from https://en.wikipedia.org/wiki/Morse_code.
+/// All whitespaces/control characters are just mapped to the their values
+/// and unknown characters are mapped to ........ (the official error sequence)
 pub(crate) fn morse_code_from(char: char) -> &'static str {
     match char {
         // Latin letters
@@ -70,10 +85,7 @@ pub(crate) fn morse_code_from(char: char) -> &'static str {
         '\r' => "\r",
         '\t' => "\t",
         '\0' => "\0",
-        // Everything else leads to a panic!
-        // TODO: Log error source
-        _ => todo!(),
-
-        // TODO: Add error secquece
+        // Everything else is mapped to Error
+        _ => "........",
     }
 }

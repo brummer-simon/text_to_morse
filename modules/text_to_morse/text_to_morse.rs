@@ -1,32 +1,33 @@
-// TODO: Implement find a way to enter broken character via buildroot
-// TODO: Rewrite documentation
-// TODO: Expose cdev from submodule
-// TODO: Fix all warnings
+// SPDX-License-Identifier: Dual MPL/GPL
 
-// Module internal
+//! Kernel Module to convert UTF-8 text to morse code.
+//! Author: Simon Brummer <simon.brummer@posteo.de>
+
+// TODO: Test concurrent reading and writing
+// TODO: Expose dev_t (for unique device id) from file structure
+
 mod ringbuffer;
 use ringbuffer::Ringbuffer;
 
 mod morse;
 use morse::morse_code_from;
 
-// Module external
 use alloc::{string::String, vec::Vec};
-use kernel::chrdev;
-use kernel::file::{
-    self,
-    flags::{O_ACCMODE, O_RDONLY, O_RDWR, O_WRONLY},
+use kernel::{
+    chrdev,
+    file::{
+        self,
+        flags::{O_ACCMODE, O_RDONLY, O_RDWR, O_WRONLY},
+    },
+    io_buffer::{IoBufferReader, IoBufferWriter},
+    prelude::*,
+    sync::{smutex::Mutex, Arc},
+    ForeignOwnable,
 };
-use kernel::io_buffer::{IoBufferReader, IoBufferWriter};
-use kernel::sync::{self, smutex::Mutex, Arc};
-use kernel::{prelude::*, ForeignOwnable};
 
-// Constants
-const MINOR_IDS_BEGIN: u16 = 0;
 const MAX_DEVICES: usize = 1;
 const BUFFER_SIZE: usize = 10;
 
-// Kernel module registration.
 module! {
     type: Module,
     name: "text_to_morse",
@@ -42,15 +43,18 @@ module! {
     },
 }
 
+/// Core kernel module containing all module data.
 struct Module {
+    // Character device registration object.
     _registry: Pin<Box<chrdev::Registration<MAX_DEVICES>>>,
 }
 
 impl kernel::Module for Module {
     fn init(name: &'static CStr, module: &'static ThisModule) -> Result<Self> {
-        pr_debug!("Called init(...)\n");
+        pr_info!("Loading module text_to_morse.\n");
 
-        // Determine the number of devices to create
+        // Create requested number of devices. If too much devices
+        // shall be created fail on loading with EOVERFLOW.
         let devices = DEVICES.read().clone();
         if MAX_DEVICES < devices {
             pr_crit!(
@@ -61,8 +65,7 @@ impl kernel::Module for Module {
             return Err(EOVERFLOW);
         }
 
-        // Register given number of Character devices
-        let mut registry = chrdev::Registration::new_pinned(name, MINOR_IDS_BEGIN, module)?;
+        let mut registry = chrdev::Registration::new_pinned(name, 0, module)?;
         for number in 0..devices {
             pr_info!("Registering device number {}\n", number);
             registry.as_mut().register::<Device>()?;
@@ -76,42 +79,58 @@ impl kernel::Module for Module {
 
 impl Drop for Module {
     fn drop(&mut self) {
-        pr_debug!("Called drop(...)\n");
+        pr_info!("Unloading module text_to_morse.\n");
     }
 }
 
-/// Character device implementation.
-struct DeviceState {
-    has_readers: bool,
-    has_writers: bool,
-    queue: Ringbuffer<u8, BUFFER_SIZE>,
+/// Mutable inner state of a Device
+struct DeviceInner {
+    has_readers: bool,                  // Flag to indicate if a device is read accessed
+    has_writers: bool,                  // Flag to indicate if a device is write accessed
+    queue: Ringbuffer<u8, BUFFER_SIZE>, // Ringbuffer containing transformed morse code.
 }
 
-impl DeviceState {
-    fn new() -> Mutex<Self> {
-        Mutex::new(Self {
+impl DeviceInner {
+    /// Create a new DeviceInner object
+    fn new() -> Self {
+        Self {
             has_readers: false,
             has_writers: false,
             queue: Ringbuffer::new(),
-        })
+        }
     }
 }
 
+/// Character device implementing text to morse conversion.
 struct Device {
-    id: usize,
-    state: Mutex<DeviceState>,
+    id: usize,                 // Constant Id of the device.
+    inner: Mutex<DeviceInner>, // Mutable inner device state, protected by a Mutex
 }
 
 impl Device {
+    /// Try to create a new character device.
+    ///
+    /// # Arguments:
+    /// * id: The id of the new device to create.
+    ///
+    /// # Returns:
+    /// On success, an Arc containing a new Device,
+    /// on failure an Err containing return code ENOMEM.
     fn try_new(id: usize) -> Result<Arc<Self>> {
-        let state = DeviceState::new();
-        let device = Device { id, state };
+        let inner = Mutex::new(DeviceInner::new());
+        let device = Device { id, inner };
         Arc::try_new(device)
     }
 
-    fn get_or_allocate_device(id: usize) -> Result<Arc<Device>> {
-        // Try to find device in device pool. If this fails, try to create
-        // new device and insert it.
+    /// Lookup or try to allocate a specific device.
+    ///
+    /// Arguments:
+    /// * id: The device id to get or to create new device with.
+    ///
+    /// Returns:
+    /// On success, an Arc to the found / newly allocated device,
+    /// on failure an Err containing return code ENOMEM.
+    fn get_or_try_allocate_device(id: usize) -> Result<Arc<Device>> {
         static DEVICES_POOL: Mutex<Vec<Arc<Device>>> = Mutex::new(Vec::new());
 
         let mut device_pool = DEVICES_POOL.lock();
@@ -119,6 +138,11 @@ impl Device {
 
         match device {
             None => {
+                pr_info!(
+                    "Device pool contains no device with id {}. Try to allocate new one.\n",
+                    id
+                );
+
                 let device = Device::try_new(id)?;
                 device_pool.try_push(device.clone())?;
                 Ok(device)
@@ -130,24 +154,48 @@ impl Device {
 
 #[vtable]
 impl file::Operations for Device {
+    type OpenData = ();
     type Data = Arc<Device>;
 
-    fn open(_: &(), file: &file::File) -> Result<Self::Data> {
-        // Open: Implements "backend" syscall open. We enforce the following semantics:
-        // - Exclusive read access: At most one reader is allowed at all times.
-        // - Exclusive write access: At most one writer is allowed at all times.
-        pr_info!("Called open(...)\n");
-
-        // TODO: Determine minor_id from file and use it as device id. No obvious way to do it.
+    /// Syscall open implementation
+    ///
+    /// # Arguments:
+    /// * _: Reference to OpenData. Currently only unit type is supported.
+    /// * file: Reference kernel file data structure.
+    ///
+    /// # Returns:
+    /// On success: An Ok containing an Arc to the Device, on failure
+    /// an Err containing one of the following error codes:
+    /// * ENOMEM: A new device must be allocated and this fails.
+    /// * EACCESS: Opening the device violates exclusive access rules.
+    ///
+    /// # Notes:
+    /// To function properly, this device relies on exclusive access for reading and/or writing.
+    fn open(_: &Self::OpenData, file: &file::File) -> Result<Self::Data> {
+        // Try to access device associated with file
+        // TODO: Extend file::File wrapper to access dev_t value of the file.
         let minor_id = 0;
-        let device = Device::get_or_allocate_device(minor_id)?;
+        let device = match Device::get_or_try_allocate_device(minor_id) {
+            Ok(device) => {
+                pr_info!("Open device {}\n", device.id);
+                device
+            }
+            Err(errno) => {
+                pr_err!(
+                    "Failed to open device {}. Error was: {:?}\n",
+                    minor_id,
+                    errno
+                );
+                return Err(errno);
+            }
+        };
 
         // Handle requested access mode
         match file.flags() & O_ACCMODE {
-            // Handle read only access attempt
+            // Read only access attempt
             O_RDONLY => {
-                let mut state = device.state.lock();
-                if state.has_readers {
+                let mut inner = device.inner.lock();
+                if inner.has_readers {
                     pr_err!(
                         "Failed to get read access for Device {}. Already in use.\n",
                         device.id
@@ -155,13 +203,13 @@ impl file::Operations for Device {
                     return Err(EACCES);
                 } else {
                     pr_info!("Mark Device {} as read accessed.\n", device.id);
-                    state.has_readers = true;
+                    inner.has_readers = true;
                 }
             }
-            // Handle write only access attempt
+            // Write only access attempt
             O_WRONLY => {
-                let mut state = device.state.lock();
-                if state.has_writers {
+                let mut inner = device.inner.lock();
+                if inner.has_writers {
                     pr_err!(
                         "Failed to get write access for Device {}. Already in use.\n",
                         device.id
@@ -169,13 +217,13 @@ impl file::Operations for Device {
                     return Err(EACCES);
                 } else {
                     pr_info!("Mark Device {} as write accessed.\n", device.id);
-                    state.has_writers = true;
+                    inner.has_writers = true;
                 }
             }
-            // Handle read/write access attempt
+            // Read/write access attempt
             O_RDWR => {
-                let mut state = device.state.lock();
-                if state.has_readers || state.has_writers {
+                let mut inner = device.inner.lock();
+                if inner.has_readers || inner.has_writers {
                     pr_err!(
                         "Failed to get read/write access for Device {}. Already in use.\n",
                         device.id
@@ -183,88 +231,124 @@ impl file::Operations for Device {
                     return Err(EACCES);
                 } else {
                     pr_info!("Mark Device {} as read/write accessed.\n", device.id);
-                    state.has_readers = true;
-                    state.has_writers = true;
+                    inner.has_readers = true;
+                    inner.has_writers = true;
                 }
             }
             _ => {
-                pr_err!("Unhandled access flags. Return Error.\n");
+                pr_err!("Unexpected access flags. Return Error.\n");
                 return Err(EACCES);
             }
         };
+
+        pr_info!("Opened device {} successfully\n", minor_id);
         Ok(device)
     }
 
+    /// Syscall release implementation
+    ///
+    /// # Arguments:
+    /// * device: Reference to Device to release
+    /// * file: Reference kernel file data structure.
+    ///
+    /// # Notes:
+    /// This function resets the exclusive access flags set in open.
     fn release(device: Self::Data, file: &file::File) {
-        // Release: Implements "backend" of syscall release. Return mutual access
-        // acquired in open call.
-        pr_info!("Called release(...)\n");
+        pr_info!("Release device {}\n", device.id);
 
-        // Free usage based access mode
         match file.flags() & O_ACCMODE {
+            // Return read only access
             O_RDONLY => {
-                pr_info!("Mark Device {} as not read accessed.\n", device.id);
-                device.state.lock().has_readers = false;
+                pr_info!("Unmark Device {} as read accessed.\n", device.id);
+                device.inner.lock().has_readers = false;
             }
+            // Return write only access
             O_WRONLY => {
-                pr_info!("Mark Device {} as not write accessed.\n", device.id);
-                device.state.lock().has_writers = false;
+                pr_info!("Unmark Device {} as write accessed.\n", device.id);
+                device.inner.lock().has_writers = false;
             }
+            // Return read/write access
             O_RDWR => {
-                pr_info!("Mark Device {} as not read/write accessed.\n", device.id);
-                let mut state = device.state.lock();
-                state.has_readers = true;
-                state.has_writers = true;
+                pr_info!("Unmark Device {} as read/write accessed.\n", device.id);
+                let mut inner = device.inner.lock();
+                inner.has_readers = true;
+                inner.has_writers = true;
             }
             _ => {
-                pr_err!("Unhandled access flags. Do nothing.\n");
+                pr_err!("Unexpected access flags. This should never happen. Do nothing.\n");
             }
         };
+
+        pr_info!("Released device {} successfully\n", device.id);
     }
 
-    // TODO: Figure out meaning of offset parameter
+    /// Syscall write implementation
+    ///
+    /// # Arguments:
+    /// * device: Reference to Device to write data into.
+    /// * _file: Reference kernel file data structure.
+    /// * buffer: Reference to buffered reader containing the data to write.
+    /// * offset: Buffer offset parameter.
+    ///
+    /// # Returns:
+    /// On success: An Ok containing the number of successfully written bytes, on failure
+    /// an Err containing one of the following error codes:
+    /// * EAGAIN: The internal buffer is currently full. A later attempt might be successful.
+    /// * EINVAL: Given buffer contains not a single, valid UTF-8 codepoint.
+    /// * EINVAL: Given buffer contains not a single, valid UTF-8 codepoint.
+    ///
+    /// # Notes:
+    /// * write is meant from a user space perspective. If a process from user space wants to write
+    ///   into a file, the file must read from content from user space.
+    /// * From a user space side, buffered data may be passed chunk wise to the read function.
+    ///   If UTF-8 verification fails this does not mean that entire byte sequence is garbage,
+    ///   if might be a case of a miss-aligned buffer and the next attempt contains all expected
+    ///   bytes -> If any errors occur and there have been successfully written bytes, return the
+    ///   number of written bytes instead of an error.
     fn write(
         device: <Self::Data as ForeignOwnable>::Borrowed<'_>,
         _file: &file::File,
         buffer: &mut impl IoBufferReader,
-        _offset: u64,
+        offset: u64,
     ) -> Result<usize> {
-        // Write: Implements "backend" of syscall write.
-        pr_info!("Called write(...)\n");
+        pr_info!("Try to write {} into device {}\n", buffer.len(), device.id);
+        pr_info!("Write: Offset is {}\n", offset);
 
-        // Determine available space in our buffer. If no space is available,
-        // return EAGAIN to indicate that a later attempt might succeed.
-        let mut state = device.state.lock();
-        if state.queue.is_full() {
-            pr_info!("Write failed. Queue is already exhausted.\n");
+        let mut inner = device.inner.lock();
+        if inner.queue.is_full() {
+            pr_info!("Write failed. Queue is already exhausted, try later.\n");
             return Err(EAGAIN);
         }
 
-        // Parse buffer char by char, verify utf-8 encoding and append all chars to our queue
-        // until everything is read, our queue is exhausted to something has gone
-        // wrong.
+        // Parse buffer char by char. Since a char is a UTF-8 codepoint with variable length
+        // encoding, try to extract a char from buffer, verify its encoding and convert
+        // it afterwards to the associated morse code representation until one
+        // of the following events happen:
+        // - The given buffer is drained
+        // - Our internal queue is exhaused.
+        // - Or something else has gone wrong.
         let mut total_bytes_read = 0usize;
-        while !state.queue.is_full() {
+        while !inner.queue.is_full() {
             let result = try_read_char(buffer).and_then(|char| {
                 let read_bytes = char.len_utf8();
                 let morse_code = morse_code_from(char);
-                pr_info!("Storing char '{}' as '{}'\n", char, morse_code);
+                pr_info!("Try to store given char '{}' as '{}'\n", char, morse_code);
 
                 let morse_code = morse_code.as_bytes();
-                if morse_code.len() <= state.queue.free() {
+                if morse_code.len() <= inner.queue.free() {
                     morse_code
                         .iter()
-                        .try_for_each(|byte| state.queue.try_push(*byte))?;
+                        .try_for_each(|byte| inner.queue.try_push(*byte))
+                        .unwrap(); // Due to the previous check, it should never fail.
 
                     total_bytes_read += read_bytes;
                     Ok(())
                 } else {
-                    pr_info!("Failed to store morse code. Queue is out of memory\n");
-                    Err(ENOMEM)
+                    pr_info!("Unable to store morse code. Queue is out of memory. Try again later\n");
+                    Err(EAGAIN)
                 }
             });
 
-            // Examine errors
             if let Err(errno) = result {
                 if total_bytes_read > 0 {
                     break;
@@ -277,21 +361,39 @@ impl file::Operations for Device {
                 return Err(errno);
             }
         }
-        pr_info!("Read {} bytes in total.\n", total_bytes_read);
+        pr_info!(
+            "Written {} bytes into device {}\n",
+            total_bytes_read,
+            device.id
+        );
         Ok(total_bytes_read)
     }
 
-    // TODO: Figure out meaning of offset parameter
+    /// Syscall read implementation
+    ///
+    /// # Arguments:
+    /// * device: Reference to Device to write data into.
+    /// * _file: Reference kernel file data structure.
+    /// * buffer: Reference to buffered write containing read data after the call.
+    /// * offset: Buffer offset parameter.
+    ///
+    /// # Returns:
+    /// An Ok containing the number of successfully read bytes.
+    ///
+    /// # Notes:
+    /// * read is meant from a user space perspective. If a process from user space wants to read
+    ///   from a file, the file must write its contents to user space.
     fn read(
         device: <Self::Data as ForeignOwnable>::Borrowed<'_>,
         _file: &file::File,
         buffer: &mut impl IoBufferWriter,
-        _offset: u64,
+        offset: u64,
     ) -> Result<usize> {
-        pr_info!("Called read(...)\n");
+        pr_info!("Try to read {} from device {}\n", buffer.len(), device.id);
+        pr_info!("Read: Offset is {}\n", offset);
 
-        let mut state = device.state.lock();
-        if state.queue.is_empty() {
+        let mut inner = device.inner.lock();
+        if inner.queue.is_empty() {
             pr_info!("Nothing to read. Queue is empty\n");
             return Ok(0);
         }
@@ -299,23 +401,31 @@ impl file::Operations for Device {
         // Transfer bytes from queue to buffer until either the buffer or the queue is empty.
         let mut total_bytes_written = 0usize;
         while !buffer.is_empty() {
-            match state.queue.try_pop().and_then(|byte| buffer.write(&byte)) {
+            match inner.queue.try_pop().and_then(|byte| buffer.write(&byte)) {
                 Ok(_) => total_bytes_written += 1,
                 Err(_) => break,
             }
         }
 
-        pr_info!("Written {} bytes in total.\n", total_bytes_written);
+        pr_info!("Read {} from device {}\n", total_bytes_written, device.id);
         Ok(total_bytes_written)
     }
 }
 
-// TODO: Document error semantics
-// - Encoding fails: EILSEQ
-// - Internal memory exhaused -> ENOMEM
-// - Buffer Read Fails: EINVAL
+/// Try to read a UTF-8 char from given buffer
+///
+/// # Arguments:
+/// * buffer: The buffer to read from.
+///
+/// # Returns:
+/// On success: An Ok containing char read from buffer argument, on failure
+/// an Err containing one of the following error codes:
+/// * EINVAL: The given buffer contains no valid UTF-8 character start byte.
+/// * EINVAL: The given buffer is to short to contain a UTF-8 character.
+/// * ENOMEM: Temporary data structures ran out of memory. This should not happen...
+///
 fn try_read_char(buffer: &mut impl IoBufferReader) -> Result<char> {
-    // Bitfiddling constants
+    // Bitfiddling constants to determine byte length of expected char.
     const MASK_1BYTE: u8 = 0b10000000;
     const BITS_1BYTE: u8 = 0b00000000;
     const MASK_2BYTE: u8 = 0b11100000;
@@ -336,13 +446,11 @@ fn try_read_char(buffer: &mut impl IoBufferReader) -> Result<char> {
     } else if (byte & MASK_4BYTE) == BITS_4BYTE {
         Ok(3)
     } else {
-        // Buffer contents are not a utf-8 encoded string.
-        // Return EILSEQ (Illegal byte sequence)
-        Err(EILSEQ)
+        Err(EINVAL)
     }?;
 
-    // Read additional bytes, convert them in a String of enforce proper UTF8
-    // validation and return read character.
+    // Read additional bytes, convert them to a 1 char in a String (verifies UTF8 encoding)
+    // and return read character.
     let mut bytes = Vec::new();
     bytes.try_push(byte).map_err(|_| ENOMEM)?;
 
@@ -351,6 +459,6 @@ fn try_read_char(buffer: &mut impl IoBufferReader) -> Result<char> {
         bytes.try_push(byte).map_err(|_| ENOMEM)?;
     }
 
-    let string = String::from_utf8(bytes).map_err(|_| EILSEQ)?;
-    string.chars().nth(0).ok_or_else(|| EILSEQ)
+    let string = String::from_utf8(bytes).map_err(|_| EINVAL)?;
+    string.chars().nth(0).ok_or_else(|| EINVAL)
 }
