@@ -31,6 +31,10 @@ help:
 	echo "    - login            - Login into linux environment"
 	echo "    - login_kernel_log - Login into linux environment and follow kernel log"
 	echo "    - open_rustdoc     - Open rustdoc for linux kernel facilities."
+	echo
+	echo "Other targets:"
+	echo "    - slides           - Build slides"
+	echo "    - presentation     - Build slides and spawn presentation mode"
 	echo "    - shellcheck       - Check bash scripts under scripts"
 
 # Configuration targets
@@ -97,6 +101,13 @@ login_kernel_log:
 open_rustdoc:
 	./scripts/open_rustdoc.sh
 
+# Other targets
+slides:
+	./scripts/build_slides.sh
+
+presentation:
+	./scripts/start_slides.sh
+
 shellcheck:
 	shellcheck -a -s bash scripts/*
 
@@ -120,6 +131,8 @@ shellcheck:
 	login\
 	login_kernel_log\
 	open_rustdoc\
+	slides\
+	presentation\
 	shellcheck
 
 .SILENT:\
@@ -142,4 +155,6 @@ shellcheck:
 	login\
 	login_kernel_log\
 	open_rustdoc\
+	slides\
+	presentation\
 	shellcheck

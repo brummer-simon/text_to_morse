@@ -8,7 +8,7 @@ means to build, integrate and test __your own kernel modules__ easily.
 
 The contents of this repository are educational resources, so feel free to use and distribute it.
 
-TODO(mention task/link after publishing)
+TODO(add link after publishing)
 
 ## Development environment
 
@@ -88,6 +88,9 @@ Mandatory:
 Optional:
 - shellcheck. Uses to sanity check all contained shell scripts
 - xdg-utils. Used to find the default web browser to open rustdoc
+- typst. Used to generate slides for the Rust Fest Talk.
+- pdfpc. Application used to display slideshow from PDFs.
+- polylux2pdfpc. Extracts notes for pdfpc from typst polylux slides.
 
 ### Buildroot configuration adjustments
 
@@ -127,7 +130,7 @@ was changed in the following way:
 ## Other projects
 
 This is not the only project providing a kernel development environment. Depending on your
-needs / linux flavor in use, others might work better for you. Here is a list of 
+needs / linux flavor in use, others might work better for you. Here is a place to mention
 other interesting projects:
 
 - For Nix Users: [kernel-dev](https://github.com/blitz/kernel-dev)
