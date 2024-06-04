@@ -16,7 +16,7 @@ In general, the best way to run kernel modules under development is a virtual en
 prevents "biting the hand that feeds you" problems, often encountered during low level development.
 
 This setup uses [buildroot](http://www.buildroot.org) to build a tiny userland and [qemu](http://www.qemu.org), a hardware emulator.
-The linux kernel itself is configured and built directly from source.
+The Linux kernel itself is configured and built directly from source.
 
 Combining the cross-compiling capabilities of buildroot and linux with the ability of qemu to emulate
 most existing system architectures, the result is a flexible test environment able to mimic most existing systems.

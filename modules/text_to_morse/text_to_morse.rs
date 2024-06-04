@@ -269,8 +269,8 @@ impl file::Operations for Device {
             O_RDWR => {
                 pr_info!("Unmark Device {} as read/write accessed.\n", device.id);
                 let mut inner = device.inner.lock();
-                inner.has_readers = true;
-                inner.has_writers = true;
+                inner.has_readers = false;
+                inner.has_writers = false;
             }
             _ => {
                 pr_err!("Unexpected access flags. This should never happen. Do nothing.\n");
