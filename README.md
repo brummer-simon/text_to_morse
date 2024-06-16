@@ -38,7 +38,7 @@ In order to provide a convenient user experience of all of those steps are scrip
    ```
 3) Build the entire development environment (full build takes ~45m):
    ```
-   make build_env build_module login
+   make build_env build_module load_module login
    ```
 
 On success, you are greeted by the message:
