@@ -54,6 +54,11 @@ readonly RUSTUP_BIN_DIR="${RUSTUP_DIR}/bin"
 readonly CARGO_DIR="${BUILD_DIR}/cargo"
 readonly CARGO_BIN_DIR="${CARGO_DIR}/bin"
 
+# Slides: files
+readonly SLIDES_DIR="${BASE_DIR}/slides"
+readonly SLIDES_BUILD_DIR="${BUILD_DIR}/slides"
+readonly SLIDES="${SLIDES_BUILD_DIR}/slides.pdf"
+
 # Tools: files
 readonly TMP_QEMU_PID_FILE="/tmp/kernel_hacking_environment.pid"
 readonly SSH_PASSWORD_FILE="${BUILD_DIR}/ssh_password"
@@ -321,6 +326,11 @@ export RUSTUP_DIR
 export RUSTUP_BIN_DIR
 export CARGO_DIR
 export CARGO_BIN_DIR
+
+# Slides: paths
+export SLIDES_DIR
+export SLIDES_BUILD_DIR
+export SLIDES
 
 # Tools: files
 export TMP_QEMU_PID_FILE
